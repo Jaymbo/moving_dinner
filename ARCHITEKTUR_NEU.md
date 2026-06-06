@@ -114,7 +114,7 @@ CREATE TABLE responses (
   UNIQUE(meeting_id, user_id)  -- Eine Anmeldung pro Treffen pro Person
 );
 ```
-**Hinweis:** `indifferent` = Default, User muss aktiv `will_host` oder `cannot_host` wählen. Algorithmus: `will_host` → Score-Bonus, `cannot_host` → Score-Malus, `indifferent` → normaler Score.
+**Hinweis:** `indifferent` = Default, User muss aktiv `will_host` oder `cannot_host` wählen. Algorithmus: `will_host` -> Score-Bonus, `cannot_host` -> Score-Malus, `indifferent` -> normaler Score.
 
 ### 2.8 scores (Masterblatt)
 ```sql
@@ -148,7 +148,6 @@ CREATE TABLE meetup_matrix (
 | `findAndRenameResponseSheet` | Entfällt komplett | Kein Sheet-Umbenennungs-Trick mehr |
 | Treffen-Matrix als Sheet | `meetup_matrix` Tabelle | Normalisierte Relation |
 | `edit_url` in meetings | `rsvp_tokens` Tabelle | Persönliche Links statt globaler Edit-URL |
-| Treffen-Matrix als Sheet | `meetup_matrix` Tabelle | Normalisierte Relation |
 
 ---
 
@@ -221,7 +220,7 @@ POST   /api/meetings/:id/send-rsvp      – RSVP-Mails an alle Gruppenmitglieder
 ```
 POST   /api/meetings/:id/assign          – Host-Zuweisung automatisch berechnen
 GET    /api/meetings/:id/assignment      – Aktuelle Zuweisung abrufen
-PUT    /api/meetings/:id/assignment      – Manuelle Zuweisung überschreiben {responses: [{user_id, assigned_host}]} (nur vor Freeze)
+PUT    /api/meetings/:id/assignment      – Manuelle Zuweisung überschreiben (nur vor Freeze)
 ```
 
 ### 3.9 Admin-Aktionen
@@ -231,7 +230,7 @@ POST   /api/meetings/:id/remind          – Manuell Erinnerung auslösen
 POST   /api/admin/recalculate-scores     – Scores + Matrix neu berechnen
 ```
 
-### 3.10 Public (für Gäste & Unangemeldete)
+### 3.10 Public (für Gäste und Unangemeldete)
 ```
 GET    /api/public/meetings/active       – Offene Treffen (für Anmelde-Link)
 POST   /api/public/meetings/:id/register – Selbst-Anmeldung als Gast {name, email, host_wish, diet}
@@ -243,42 +242,87 @@ POST   /api/public/meetings/:id/register – Selbst-Anmeldung als Gast {name, em
 
 ### P1: Neues Treffen erstellen
 ```
-Admin → POST /api/meetings {date, deadline}
-  → DB: meetings-Zeile anlegen (frozen=false)
-  → Cron/Background: notifyAllNewMeeting()
-       → DB: users.email
-       → SMTP: E-Mail an alle mit Link zur Anmeldeseite
+Gruppen-Admin → POST /api/groups/:id/meetings {date, deadline}
+  → DB: meetings-Zeile anlegen (frozen=false, group_id)
+  → DB: rsvp_tokens generieren – ein Token pro Gruppenmitglied
+       → INSERT rsvp_tokens (token, meeting_id, user_id)
+       → Token = crypto.randomBytes(32).toString('hex')
+  → Background: notifyGroupNewMeeting(group_id, meeting_id)
+       → DB: group_members + users → E-Mails der Gruppenmitglieder
+       → SMTP: E-Mail an jedes Mitglied mit persönlichem RSVP-Link
+              Link: https://domain/rsvp/{token}
+              → 1-Klick: Host-Wunsch wählen, fertig
 ```
-**Vereinfachung:** Kein Formular, kein Token, kein Sheet-Umbenennen. Nur eine DB-Zeile.
+**Neu:** Persönliche RSVP-Links statt globaler Formular-URL. Kein Login nötig für Anmeldung. Gruppenmitglieder bekommen Token, Gäste nutzen den Public-Endpoint.
 
-### P2: Anmeldephase (bei jeder Anmeldung)
+### P2: Anmeldephase – RSVP-Link (persönlich)
 ```
-User → POST /api/public/meetings/:id/register {user_id, host_wish}
-  → DB: responses-Zeile anlegen (UNIQUE constraint verhindert Duplikate)
+User klickt RSVP-Link → GET /api/rsvp/{token}
+  → DB: rsvp_tokens JOIN meetings JOIN users → Meeting-Daten + UserName
+  → Frontend: zeigt Meeting-Info + Name + 3 Optionen
+      ○ Will hosten
+      ○ Egal (Default)
+      ○ Kann nicht hosten
+  User wählt → POST /api/rsvp/{token} {host_wish}
+  → DB: rsvp_tokens.used = TRUE
+  → DB: responses-Zeile anlegen (user_id aus Token, UNIQUE constraint verhindert Duplikate)
   → Background: assignHosts(meeting_id)
-       → DB: responses + users + scores + meetup_matrix lesen
-       → Algorithmus (identisch wie alt, siehe §4 alte Doku)
-       → DB: responses.assigned_host zurückschreiben
 ```
-**Vereinfachung:** Kein Dropdown-Sync nötig (User wählt aus User-Tabelle). Assignment läuft automatisch nach jeder Anmeldung.
+**Vorteil:** Kein Login nötig, keine Verwechslung, Token ist persönlicher Beweis. Token verfällt nach Gebrauch oder Deadline.
 
-### P3: Deadline-Erinnerung (täglich, Cron)
+### P2b: Anmeldephase – Angemeldeter User (ohne RSVP-Link)
+```
+Eingeloggter User → POST /api/meetings/:id/responses {host_wish}
+  → Auth: user_id aus Session/Token
+  → DB: responses-Zeile anlegen (UNIQUE constraint)
+  → Background: assignHosts(meeting_id)
+```
+
+### P2c: Anmeldephase – Gast (ohne Account)
+```
+Gast → POST /api/public/meetings/:id/register {name, email, host_wish, diet}
+  → DB: User anlegen mit is_guest=TRUE, password_hash=NULL
+  → DB: responses-Zeile anlegen
+  → Background: assignHosts(meeting_id)
+  → Optional: E-Mail an Gast mit Bestätigung + "Wollen Sie einen Account?"-Link
+```
+**Gast-Konvertierung:** Später kann der Gast über `POST /api/users/:id/convert` ein Passwort setzen + Profil ergänzen → `is_guest=FALSE`.
+
+### P3: Manuelle Zuweisung (Admin, vor Freeze)
+```
+Admin → PUT /api/meetings/:id/assignment {responses: [{user_id, assigned_host}, ...]}
+  → Auth: Prüfe Admin-Status
+  → DB: Prüfe meeting.frozen = false (sonst 403)
+  → DB: responses.assigned_host für jedes angegebene user_id aktualisieren
+  → Hintergrund: assignHosts() wird NICHT automatisch getriggert
+     (Admin hat manuell überschrieben, Auto-Assignment würde Änderung rückgängig machen)
+```
+**Wichtig:** Manuelle Zuweisung ist nur vor Freeze möglich. Nach automatischer Zuweisung kann der Admin Gruppen per Drag&Drop anpassen. Danach keine automatische Neuzuweisung mehr für dieses Meeting.
+
+### P4: Deadline-Erinnerung (täglich, Cron)
 ```
 Cron (täglich 09:00) → sendPreDeadlineReminders()
   → DB: meetings WHERE frozen=false AND deadline BETWEEN now AND now+24h
-  → Für jedes: DB: responses WHERE meeting_id (bereits angemeldete user_ids)
-  → DB: users WHERE id NOT IN (angemeldete)
-  → SMTP: Erinnerung an fehlende User
+  → Für jedes Meeting:
+      → DB: group_members + users → alle Gruppenmitglieder
+      → DB: responses WHERE meeting_id → bereits angemeldete user_ids
+      → DB: rsvp_tokens WHERE meeting_id AND used=false → noch offene Tokens
+      → Für jeden nicht-angemeldeten User:
+          SMTP: Erinnerung mit persönlichem RSVP-Link (bestehenden Token oder neuen generieren)
 ```
-**Vereinfachung:** Eine SQL-Query statt Sheet-Zeilen-Iteration.
+**Neu:** Erinnerung enthält RSVP-Link, kein separates Formular. Token wird bei Bedarf neu generiert wenn alter verfallen.
 
-### P4: Nach Deadline (Abschluss)
+### P5: Nach Deadline (Abschluss)
 ```
 Cron (alle 30min) → processDeadlines()
   → DB: meetings WHERE frozen=false AND deadline <= now
   → Für jedes abgelaufene Treffen:
-      → DB: responses + users lesen
-      → Mails aufbauen (Hosts: Gästeliste+Diät, Gäste: Host+Adresse)
+      → DB: responses + users lesen (inkl. is_guest-User)
+      → Falls noch keine Zuweisung: assignHosts(meeting_id) ausführen
+      → Mails aufbauen:
+          Für Hosts: Gästeliste + Diät + Adresse (Gäste sind bei dir)
+          Für Gäste: Host-Name + Host-Adresse
+          Für Gast-User: Zusätzlich Hinweis "Account erstellen?" mit Konvertierungs-Link
       → SMTP: Mails versenden
       → DB: meeting.frozen = true
   → Wenn mindestens 1 Treffen gefreezt:
@@ -291,15 +335,37 @@ Cron (alle 30min) → processDeadlines()
 ```
 **Vereinfachung:** Alles transaktional, keine Race Conditions, keine veraltete Matrix.
 
+### P6: Gruppe beitreten (per Einladungscode)
+```
+User → GET /api/join/:code → Gruppen-Info sehen
+User → POST /api/join/:code → Gruppe beitreten
+  → DB: group_invitations WHERE code=:code AND (expires_at IS NULL OR expires_at > now)
+  → DB: Prüfe max_uses > used_count (falls max_uses gesetzt)
+  → DB: group_members Zeile anlegen (role='member')
+  → DB: group_invitations.used_count += 1
+  → Ab sofort: User sieht alle offenen Meetings dieser Gruppe
+```
+
+### P7: Gast → User konvertieren
+```
+Gast → POST /api/users/:id/convert {password, address, max_guests}
+  → Auth: Prüfe dass requester der User selbst ist (oder Admin)
+  → DB: Prüfe user.is_guest = true
+  → DB: password_hash setzen, address/max_guests aktualisieren, is_guest = false
+  → Ergebnis: User kann sich einloggen, Gruppen beitreten, eigene RSVPs verwalten
+```
+
 ---
 
 ## 5. Cron-Jobs
 
 | Job | Intervall | Funktion |
 |-----|-----------|----------|
-| Deadline-Erinnerung | Täglich 09:00 | `sendPreDeadlineReminders()` |
+| Deadline-Erinnerung | Täglich 09:00 | `sendPreDeadlineReminders()` – mit RSVP-Link |
 | Deadline-Verarbeitung | Alle 30 Min | `processDeadlines()` → Freeze + Mails + Recalc |
-| *(optional) Assignment-Recalc* | Täglich 03:00 | Alle offenen Treffen neu zuweisen (falls Daten korrigiert wurden) |
+| RSVP-Token Cleanup | Täglich 03:00 | Abgelaufene/verbrauchte Tokens aufräumen |
+| *(optional) Assignment-Recalc* | Täglich 04:00 | Offene Treffen neu zuweisen (nur wenn keine manuelle Überschreibung) |
+| *(optional) Gast-Reminder* | Wöchentlich | Gäste mit is_guest=TRUE an Account-Erstellung erinnern |
 
 Implementierung: `node-cron` im Backend-Container.
 
@@ -317,36 +383,50 @@ moving-dinner/
 │   │   ├── App.tsx
 │   │   ├── pages/
 │   │   │   ├── AdminMeetings.tsx    # Treffen-Übersicht + erstellen
-│   │   │   ├── AdminUsers.tsx       # Stammdaten pflegen
+│   │   │   ├── AdminUsers.tsx       # Stammdaten pflegen (inkl. Gast→User)
 │   │   │   ├── AdminScores.tsx      # Score-Board
-│   │   │   └── PublicRegister.tsx   # Teilnehmer-Anmeldung
+│   │   │   ├── AdminGroups.tsx      # Gruppen verwalten, Einladungen
+│   │   │   ├── AdminAssignment.tsx  # Manuelle Host-Zuweisung (Drag&Drop)
+│   │   │   ├── PublicRegister.tsx   # Selbst-Registrierung + Gast-Anmeldung
+│   │   │   ├── RsvpPage.tsx         # RSVP-Link Landing Page (1-Klick)
+│   │   │   ├── JoinGroup.tsx        # Einladungscode → Gruppe beitreten
+│   │   │   ├── MyMeetings.tsx       # Offene Treffen aus meinen Gruppen
+│   │   │   └── Profile.tsx          # Eigenes Profil bearbeiten
 │   │   └── api/                    # API-Client
 │   └── vite.config.ts
 ├── backend/                   # Container 2
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── tsconfig.json
+│   ├── prisma/
+│   │   └── schema.prisma           # Prisma Schema (alle Tabellen)
 │   ├── src/
 │   │   ├── index.ts                 # Express + Cron Setup
-│   │   ├── db/
-│   │   │   ├── migrations/          # SQL Migrationen
-│   │   │   ├── client.ts            # pg-Pool
-│   │   │   └── queries/             # SQL Queries
+│   │   ├── middleware/
+│   │   │   ├── auth.ts              # Auth-Middleware (CF Zero Trust / JWT)
+│   │   │   └── groupAuth.ts         # Gruppen-Admin-Prüfung
 │   │   ├── routes/
-│   │   │   ├── users.ts
-│   │   │   ├── meetings.ts
-│   │   │   ├── responses.ts
-│   │   │   ├── assignment.ts
-│   │   │   └── public.ts
+│   │   │   ├── auth.ts              # Login, Register, Me
+│   │   │   ├── users.ts             # CRUD + Gast-Konvertierung
+│   │   │   ├── groups.ts            # CRUD, Mitglieder, Einladungen
+│   │   │   ├── join.ts              # /api/join/:code
+│   │   │   ├── meetings.ts          # CRUD, /my
+│   │   │   ├── responses.ts         # RSVP + Anmeldung
+│   │   │   ├── rsvp.ts              # /api/rsvp/:token
+│   │   │   ├── assignment.ts        # Auto + Manuell
+│   │   │   └── public.ts            # Gast-Registrierung
 │   │   ├── services/
-│   │   │   ├── assignment.ts        # Host-Zuweisungsalgorithmus
+│   │   │   ├── assignment.ts        # Host-Zuweisungsalgorithmus (unverändert)
 │   │   │   ├── scoring.ts           # Score-Berechnung
 │   │   │   ├── matrix.ts            # Meetup-Matrix
-│   │   │   └── email.ts             # SMTP Versand
+│   │   │   ├── email.ts             # SMTP Versand
+│   │   │   ├── rsvp.ts              # Token-Generierung + Validierung
+│   │   │   └── groups.ts            # Gruppen-Logik, Einladungen
 │   │   └── jobs/
-│   │       ├── deadlineReminder.ts  # P3
-│   │       └── deadlineProcessor.ts # P4
-│   └── drizzle.config.ts           # (oder Prisma/Knex)
+│   │       ├── deadlineReminder.ts  # P4 – mit RSVP-Links
+│   │       ├── deadlineProcessor.ts # P5 – Freeze + Mails + Recalc
+│   │       └── tokenCleanup.ts      # RSVP-Token Cleanup
+│   └── prisma.config.ts
 └── db/                        # Container 3 (oder managed)
     └── (PostgreSQL Data Volume)
 ```
@@ -358,23 +438,43 @@ moving-dinner/
 | Aspekt | Alt (Sheets) | Neu (Server) |
 |--------|-------------|--------------|
 | Datenhaltung | 5 Tabellenblätter, kein Schema-Enforcement | PostgreSQL mit FK, UNIQUE, CHECK |
-| Formular | Google Forms (extern, Token-Trick) | Eigene API + Frontend |
-| Zuweisung | Bei Änderung (Trigger, fehleranfällig) | Bei Anmeldung (API-Call, transaktional) |
+| Formular | Google Forms (extern, Token-Trick) | Eigene API + Frontend + RSVP-Links |
+| Zuweisung | Bei Änderung (Trigger, fehleranfällig) | Bei Anmeldung (API-Call, transaktional) + manuelle Admin-Überschreibung |
 | Matrix-Update | Nur nach Freeze (veraltet für Algorithmus) | Nach jedem Freeze (DB-Query) |
-| E-Mail | MailApp, kein Retry | Nodemailer + Logging + Retry-Queue |
+| E-Mail | MailApp, kein Retry | Nodemailer + Logging + Retry-Queue + RSVP-Links |
 | Dropdown-Sync | Komplett eigener Workflow | Entfällt (User wählt aus DB) |
 | Sheet-Umbenennung | Token-basiert, fragil | Entfällt (FK meeting_id) |
 | Race Conditions | Mehrere Trigger gleichzeitig | Transaktionen mit Row-Locking |
-| Auth | Keine (jeder mit Sheet-Zugriff) | Cloudflare Zero Trust |
+| Auth | Keine (jeder mit Sheet-Zugriff) | Cloudflare Zero Trust + JWT + RSVP-Tokens |
 | Audit | Sheet-Versionierung | DB-Timestamps, Logging |
+| Gruppen | Nicht vorhanden (eine feste Gruppe) | Beliebig viele Gruppen, M:N-Zugehörigkeit |
+| Gäste | Nicht möglich | is_guest-Flag auf users, Konvertierung zum Account |
+| Anmeldung | Formular-Link (global) | Persönlicher RSVP-Link (1-Klick) + Login-basiert |
+| Host-Wunsch | 2 Optionen (will_host / cannot_host) | 3 Optionen (will_host / indifferent / cannot_host) |
 
 ---
 
-## 8. Offene Entscheidungen (für dich)
+## 8. Entscheidungen (geschlossen)
 
-1. **ORM?** Raw SQL (`pg`), Query-Builder (`knex`), oder ORM (`drizzle`/`prisma`)?
-2. **E-Mail-Provider?** SMTP (eigener Server) oder Transactional-Email (Resend, SendGrid)?
-3. **Public-Anmeldung**: Soll ein neuer User sich selbst registrieren können, oder nur Admins legen User an?
-4. **Host-Wunsch erweitern?** Drei Optionen (`will_host` / `can_host` / `cannot_host`) statt zwei?
-5. **Assignment manuell überschreiben?** Sollen Admins die automatische Zuweisung manuell anpassen können?
-6. **Frontend-UI**: Simple Tables oder komplexere UI (Drag&Drop für Zuweisung)?
+| # | Frage | Entscheidung | Begründung |
+|---|-------|-------------|------------|
+| 1 | ORM? | **Prisma** | Bereits genutzt, Type-Safety, Migrations |
+| 2 | E-Mail-Provider? | **SMTP (eigener Server)** | Unabhängig, muss noch eingerichtet werden |
+| 3 | Self-Registration? | **Ja** | User können sich selbst registrieren |
+| 4 | Host-Wunsch? | **3 Werte** | will_host / indifferent / cannot_host – indifferent ist Default |
+| 5 | Manuelle Zuweisung? | **Ja, vor Freeze** | Admin kann automatische Zuweisung überschreiben |
+| 6 | Gruppen? | **Ja, M:N** | User können in beliebig vielen Gruppen sein, Einladungscode-System |
+| 7 | Gäste? | **Ja, is_guest-Flag** | Gäste als User mit is_guest=TRUE, konvertierbar |
+| 8 | RSVP-Links? | **Ja** | Persönlicher Token-basierter Link, kein Login nötig |
+
+---
+
+## 9. Noch offene Fragen
+
+1. **Frontend-UI für Zuweisung**: Simple Tables oder Drag&Drop für manuelle Zuweisung?
+2. **Gast-Einschränkungen**: Dürfen Gäste auch hosten? (Aktuell: Ja, wenn sie will_host wählen – aber sie haben evtl. keine Adresse)
+3. **Gruppen-Scores**: Scores pro Gruppe oder global? (Aktuell: global – d.h. User der in Gruppe A und B ist, hat einen Score über beide Gruppen hinweg)
+4. **RSVP-Token-Gültigkeit**: Bis Deadline oder zeitlich begrenzt (z.B. 7 Tage)?
+5. **Einladungscode-Lebensdauer**: Permanent (auf Gruppe) oder mit Ablaufdatum?
+6. **Admin-Rollen**: Wer darf Gruppen erstellen? Jeder User oder nur Super-Admins?
+7. **Datenmigration**: Sollen bestehende Google Sheets-Daten in die neue DB importiert werden?
