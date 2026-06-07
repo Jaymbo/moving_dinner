@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { users } from '../api/client';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
   const [address, setAddress] = useState('');
   const [maxGuests, setMaxGuests] = useState(2);
@@ -12,6 +14,11 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Delete profile state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -45,6 +52,20 @@ export default function ProfilePage() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteProfile() {
+    if (deleteConfirmText !== 'LÖSCHEN') return;
+    setDeleting(true);
+    setError('');
+    try {
+      await users.delete(user!.id);
+      logout();
+      navigate('/login');
+    } catch (err: any) {
+      setError(err.message);
+      setDeleting(false);
     }
   }
 
@@ -88,6 +109,61 @@ export default function ProfilePage() {
             {saving ? 'Speichern...' : 'Speichern'}
           </button>
         </form>
+      </div>
+
+      {/* Delete Profile Section */}
+      <div className="card" style={{ maxWidth: 600, marginTop: '2rem', borderColor: '#e74c3c' }}>
+        <h2 style={{ color: '#e74c3c', marginBottom: '0.5rem' }}>Profil löschen</h2>
+        <p style={{ color: '#666', marginBottom: '1rem', fontSize: '0.9rem' }}>
+          Wenn du dein Profil löschst, werden alle deine Daten unwiderruflich entfernt. 
+          Du wirst aus allen Gruppen entfernt und deine Antworten, Scores und Verlaufsdaten gelöscht.
+          Diese Aktion kann <strong>nicht</strong> rückgängig gemacht werden.
+        </p>
+
+        {!showDeleteConfirm ? (
+          <button
+            className="btn-primary"
+            style={{ backgroundColor: '#e74c3c', borderColor: '#e74c3c' }}
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            Profil löschen
+          </button>
+        ) : (
+          <div style={{ borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
+            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+              Bist du sicher? Gib <strong>LÖSCHEN</strong> ein, um zu bestätigen.
+            </p>
+            <div className="form-group">
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder='Tippe "LÖSCHEN" zum Bestätigen'
+                style={{ borderColor: deleteConfirmText && deleteConfirmText !== 'LÖSCHEN' ? '#e74c3c' : undefined }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="btn-primary"
+                style={{ backgroundColor: '#e74c3c', borderColor: '#e74c3c' }}
+                onClick={handleDeleteProfile}
+                disabled={deleteConfirmText !== 'LÖSCHEN' || deleting}
+              >
+                {deleting ? 'Wird gelöscht...' : 'Endgültig löschen'}
+              </button>
+              <button
+                className="btn-primary"
+                style={{ backgroundColor: '#6c757d', borderColor: '#6c757d' }}
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText('');
+                }}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

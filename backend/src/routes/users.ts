@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// GET /api/users – All users (any group admin)
+// GET /api/users - All users (any group admin)
 router.get('/', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
@@ -47,7 +47,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/users/:id – Edit user (own profile or admin)
+// PUT /api/users/:id - Edit user (own profile or admin)
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -81,27 +81,55 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/users/:id (admin)
+// DELETE /api/users/:id - Delete own account
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
 
-    // TODO: Admin check
+    // Only allow deleting own profile
     if (req.userId !== id) {
       res.status(403).json({ error: 'Can only delete your own account' });
       return;
+    }
+
+    // Before deleting, handle groups where user is the only admin
+    const adminMemberships = await prisma.groupMember.findMany({
+      where: { userId: id, role: 'admin' },
+      include: {
+        group: {
+          include: { members: true },
+        },
+      },
+    });
+
+    for (const membership of adminMemberships) {
+      const otherMembers = membership.group.members.filter(m => m.userId !== id);
+
+      if (otherMembers.length === 0) {
+        // User is the only member - delete the entire group
+        await prisma.group.delete({ where: { id: membership.groupId } });
+      } else {
+        // Promote the longest-standing member to admin
+        const oldestMember = otherMembers.reduce((a, b) =>
+          a.joinedAt < b.joinedAt ? a : b
+        );
+        await prisma.groupMember.update({
+          where: { id: oldestMember.id },
+          data: { role: 'admin' },
+        });
+      }
     }
 
     await prisma.user.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     console.error('Delete user error:', err);
-    res.status(500).json({ error: 'Failed to delete user' });
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 
-// POST /api/users/:id/convert – Guest → regular user
+// POST /api/users/:id/convert - Guest to regular user
 router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
