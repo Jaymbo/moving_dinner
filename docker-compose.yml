@@ -33,7 +33,7 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       SMTP_FROM: 'Moving Dinner <noreply@example.com>'
-      BASE_URL: http://localhost:3000
+      BASE_URL: http://localhost:3003
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - '3000:80'
+      - '3003:80'
     depends_on:
       - backend
 

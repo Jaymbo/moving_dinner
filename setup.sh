@@ -91,7 +91,7 @@ echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━
 echo -e "${GREEN}  🎉  Moving Dinner ist bereit!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "  ${CYAN}Frontend:${NC}  http://localhost:3000"
+echo -e "  ${CYAN}Frontend:${NC}  http://localhost:3003"
 echo -e "  ${CYAN}Backend:${NC}   http://localhost:3002"
 echo -e "  ${CYAN}DB:${NC}        postgresql://movingdinner:movingdinner@localhost:5432/movingdinner"
 echo -e "  ${CYAN}DB-Dateien:${NC} ./data/db/ (liegen auf dem Host)"
