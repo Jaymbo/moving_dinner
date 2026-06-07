@@ -63,6 +63,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
       include: {
         group: { select: { id: true, name: true, meetingCreation: true } },
         responses: { where: { userId: req.userId } },
+        _count: { select: { responses: true } },
       },
       orderBy: { date: 'asc' },
     });
@@ -71,6 +72,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
       ...m,
       hasResponded: m.responses.length > 0,
       response: m.responses[0] || null,
+      totalResponses: m._count.responses,
       userRole: roleMap.get(m.groupId) || 'member',
     }));
 

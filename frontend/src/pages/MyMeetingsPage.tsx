@@ -79,7 +79,7 @@ export default function MyMeetingsPage() {
                 )}
               </div>
               <p className="text-sm mb-2">Deadline: {formatDeadline(m.deadline)}</p>
-              <p className="text-sm mb-4">Anmeldungen: {m.responses?.length || 0}</p>
+              <p className="text-sm mb-4">Anmeldungen: {m.totalResponses ?? m._count?.responses ?? m.responses?.length ?? 0}</p>
 
               {!m.frozen && (
                 <div>
