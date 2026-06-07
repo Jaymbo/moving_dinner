@@ -1,12 +1,13 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAnyGroupAdmin } from '../middleware/groupAuth';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// GET /api/users – All users (admin)
-router.get('/', requireAuth, async (_req: AuthRequest, res: Response) => {
+// GET /api/users – All users (any group admin)
+router.get('/', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {

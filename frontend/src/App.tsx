@@ -23,8 +23,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, isAdminAnywhere } = useAuth();
+  if (loading) return <div className="loading">Laden...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdminAnywhere) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, isAdminAnywhere } = useAuth();
 
   if (loading) return <div className="loading">Laden...</div>;
 
@@ -41,12 +49,16 @@ export default function App() {
               <NavLink to="/groups" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 Gruppen
               </NavLink>
-              <NavLink to="/admin/meetings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                Admin
-              </NavLink>
-              <NavLink to="/admin/feature-requests" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                📬 Requests
-              </NavLink>
+              {isAdminAnywhere && (
+                <NavLink to="/admin/meetings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  Admin
+                </NavLink>
+              )}
+              {isAdminAnywhere && (
+                <NavLink to="/admin/feature-requests" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  📬 Requests
+                </NavLink>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted">Hallo, {user.name}</span>
@@ -69,11 +81,11 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><MyMeetingsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><AdminGroupsPage /></ProtectedRoute>} />
-          <Route path="/admin/meetings" element={<ProtectedRoute><AdminMeetingsPage /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
-          <Route path="/admin/scores" element={<ProtectedRoute><AdminScoresPage /></ProtectedRoute>} />
-          <Route path="/admin/assignment/:meetingId" element={<ProtectedRoute><AdminAssignmentPage /></ProtectedRoute>} />
-          <Route path="/admin/feature-requests" element={<ProtectedRoute><AdminFeatureRequestsPage /></ProtectedRoute>} />
+          <Route path="/admin/meetings" element={<AdminRoute><AdminMeetingsPage /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+          <Route path="/admin/scores" element={<AdminRoute><AdminScoresPage /></AdminRoute>} />
+          <Route path="/admin/assignment/:meetingId" element={<AdminRoute><AdminAssignmentPage /></AdminRoute>} />
+          <Route path="/admin/feature-requests" element={<AdminRoute><AdminFeatureRequestsPage /></AdminRoute>} />
         </Routes>
       </main>
       {user && <FeatureRequestChatWidget />}

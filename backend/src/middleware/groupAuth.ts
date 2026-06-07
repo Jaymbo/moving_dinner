@@ -78,3 +78,21 @@ export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, 
   }
   next();
 }
+
+/**
+ * Checks that the authenticated user is an admin of at least one group.
+ */
+export async function requireAnyGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.userId) {
+    res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  const adminMembership = await prisma.groupMember.findFirst({
+    where: { userId: req.userId, role: 'admin' },
+  });
+  if (!adminMembership) {
+    res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+  next();
+}

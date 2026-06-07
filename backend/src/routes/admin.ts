@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireMeetingGroupAdmin } from '../middleware/groupAuth';
+import { requireMeetingGroupAdmin, requireAnyGroupAdmin } from '../middleware/groupAuth';
 import { assignHosts } from '../services/assignment';
 import { recalculateScores } from '../services/scoring';
 import { recalculateMatrix } from '../services/matrix';
@@ -68,8 +68,8 @@ router.post('/meetings/:id/remind', requireAuth, requireMeetingGroupAdmin, async
   }
 });
 
-// POST /api/admin/recalculate-scores – Recalculate all scores and matrix
-router.post('/recalculate-scores', requireAuth, async (_req: AuthRequest, res: Response) => {
+// POST /api/admin/recalculate-scores – Recalculate all scores and matrix (any group admin)
+router.post('/recalculate-scores', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     await recalculateScores();
     await recalculateMatrix();

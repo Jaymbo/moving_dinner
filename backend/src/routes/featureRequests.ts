@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAnyGroupAdmin } from '../middleware/groupAuth';
 
 const router = Router();
 
@@ -74,8 +75,8 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /api/feature-requests/:id – Update status/priority (admin)
-router.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+// PATCH /api/feature-requests/:id – Update status/priority (any group admin)
+router.patch('/:id', requireAuth, requireAnyGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
@@ -110,7 +111,7 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/feature-requests/:id – Delete a feature request (admin or owner)
+// DELETE /api/feature-requests/:id – Delete a feature request (any group admin or owner)
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -118,6 +119,17 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 
     const existing = await prisma.featureRequest.findUnique({ where: { id } });
     if (!existing) { res.status(404).json({ error: 'Feature request not found' }); return; }
+
+    // Check if user is owner or any group admin
+    if (existing.userId !== req.userId) {
+      const adminMembership = await prisma.groupMember.findFirst({
+        where: { userId: req.userId!, role: 'admin' },
+      });
+      if (!adminMembership) {
+        res.status(403).json({ error: 'Only the author or a group admin can delete this request' });
+        return;
+      }
+    }
 
     await prisma.featureRequest.delete({ where: { id } });
     res.json({ success: true });
