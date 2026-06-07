@@ -43,14 +43,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 // Auth
 export const auth = {
   login: (email: string, password: string) =>
-    request<{ id: number; name: string; email: string; token: string }>('/auth/login', {
+    request<{ id: number; name: string; email: string; isSuperAdmin: boolean; token: string }>('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password }),
     }),
   register: (name: string, email: string, password: string) =>
-    request<{ id: number; name: string; email: string; token: string }>('/auth/register', {
+    request<{ id: number; name: string; email: string; isSuperAdmin: boolean; token: string }>('/auth/register', {
       method: 'POST', body: JSON.stringify({ name, email, password }),
     }),
-  me: () => request<{ id: number; name: string; email: string; isGuest: boolean }>('/auth/me'),
+  me: () => request<{ id: number; name: string; email: string; isGuest: boolean; isSuperAdmin: boolean }>('/auth/me'),
 };
 
 // Users
@@ -64,6 +64,10 @@ export const users = {
   convert: (id: number, data: { password: string; address?: string; maxGuests?: number }) =>
     request<{ id: number; name: string; email: string; token: string }>(`/users/${id}/convert`, {
       method: 'POST', body: JSON.stringify(data),
+    }),
+  toggleSuperAdmin: (id: number, isSuperAdmin: boolean) =>
+    request<{ id: number; name: string; email: string; isSuperAdmin: boolean }>(`/users/${id}/super-admin`, {
+      method: 'PUT', body: JSON.stringify({ isSuperAdmin }),
     }),
 };
 

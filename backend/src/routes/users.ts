@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { requireAnyGroupAdmin } from '../middleware/groupAuth';
 import bcrypt from 'bcryptjs';
 
@@ -12,7 +12,7 @@ router.get('/', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res
     const users = await prisma.user.findMany({
       select: {
         id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true, createdAt: true,
+        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
         scores: true,
       },
       orderBy: { id: 'asc' },
@@ -34,7 +34,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { id },
       select: {
         id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true, createdAt: true,
+        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
         scores: true,
         groupMembers: { include: { group: true } },
       },
@@ -47,16 +47,29 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/users/:id - Edit user (own profile or admin)
+// PUT /api/users/:id - Edit user (own profile, group admin, or super-admin)
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
 
-    // Only allow editing own profile (TODO: add admin check)
+    // Allow editing own profile, or if user is a group admin / super-admin
     if (req.userId !== id) {
-      res.status(403).json({ error: 'Can only edit your own profile' });
-      return;
+      const currentUser = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { isSuperAdmin: true },
+      });
+      if (currentUser?.isSuperAdmin) {
+        // Super-admins can edit any profile
+      } else {
+        const adminMembership = await prisma.groupMember.findFirst({
+          where: { userId: req.userId!, role: 'admin' },
+        });
+        if (!adminMembership) {
+          res.status(403).json({ error: 'Can only edit your own profile' });
+          return;
+        }
+      }
     }
 
     const { name, address, maxGuests, notes, diet } = req.body;
@@ -71,7 +84,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
       select: {
         id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true,
+        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true,
       },
     });
     res.json(user);
@@ -81,16 +94,22 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/users/:id - Delete own account
+// DELETE /api/users/:id - Delete account (own, or super-admin can delete any)
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
 
-    // Only allow deleting own profile
+    // Only allow deleting own profile, unless super-admin
     if (req.userId !== id) {
-      res.status(403).json({ error: 'Can only delete your own account' });
-      return;
+      const currentUser = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { isSuperAdmin: true },
+      });
+      if (!currentUser?.isSuperAdmin) {
+        res.status(403).json({ error: 'Can only delete your own account' });
+        return;
+      }
     }
 
     // Before deleting, handle groups where user is the only admin
@@ -171,6 +190,40 @@ router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response)
   } catch (err) {
     console.error('Convert user error:', err);
     res.status(500).json({ error: 'Failed to convert user' });
+  }
+});
+
+// PUT /api/users/:id/super-admin - Toggle super-admin status (Super-Admin only)
+router.put('/:id/super-admin', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+
+    const { isSuperAdmin } = req.body;
+    if (typeof isSuperAdmin !== 'boolean') {
+      res.status(400).json({ error: 'isSuperAdmin must be a boolean' });
+      return;
+    }
+
+    // Prevent removing your own super-admin status
+    if (req.userId === id && !isSuperAdmin) {
+      res.status(400).json({ error: 'Cannot remove your own super-admin status' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { isSuperAdmin },
+      select: { id: true, name: true, email: true, isSuperAdmin: true },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Toggle super-admin error:', err);
+    res.status(500).json({ error: 'Failed to update super-admin status' });
   }
 });
 

@@ -7,14 +7,34 @@ import { createGroup, createInvitation } from '../services/groups';
 const router = Router();
 
 // GET /api/groups – Groups the user is a member of
+// Super-admins see all groups with 'admin' role
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (currentUser?.isSuperAdmin) {
+      // Super-admins see all groups
+      const allGroups = await prisma.group.findMany({
+        include: {
+          members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true, isSuperAdmin: true } } } },
+          _count: { select: { meetings: true, members: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+      res.json(allGroups.map(g => ({ ...g, role: 'admin' })));
+      return;
+    }
+
     const memberships = await prisma.groupMember.findMany({
       where: { userId: req.userId },
       include: {
         group: {
           include: {
-            members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true } } } },
+            members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true, isSuperAdmin: true } } } },
             _count: { select: { meetings: true, members: true } },
           },
         },
@@ -29,8 +49,24 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/groups/my – My groups
+// Super-admins see all groups with 'admin' role
 router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (currentUser?.isSuperAdmin) {
+      const allGroups = await prisma.group.findMany({
+        include: { _count: { select: { meetings: true, members: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
+      res.json(allGroups.map(g => ({ ...g, role: 'admin' })));
+      return;
+    }
+
     const memberships = await prisma.groupMember.findMany({
       where: { userId: req.userId },
       include: { group: { include: { _count: { select: { meetings: true, members: true } } } } },
@@ -51,7 +87,7 @@ router.get('/:id', requireAuth, requireGroupMember, async (req: AuthRequest, res
     const group = await prisma.group.findUnique({
       where: { id },
       include: {
-        members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true } } } },
+        members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true, isSuperAdmin: true } } } },
         _count: { select: { meetings: true } },
       },
     });
@@ -159,7 +195,7 @@ router.get('/:id/members', requireAuth, requireGroupMember, async (req: AuthRequ
     const id = parseInt(req.params.id, 10);
     const members = await prisma.groupMember.findMany({
       where: { groupId: id },
-      include: { user: { select: { id: true, name: true, email: true, diet: true, isGuest: true } } },
+      include: { user: { select: { id: true, name: true, email: true, diet: true, isGuest: true, isSuperAdmin: true } } },
       orderBy: { joinedAt: 'asc' },
     });
     res.json(members);

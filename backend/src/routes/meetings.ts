@@ -8,8 +8,39 @@ import { notifyGroupNewMeeting } from '../services/email';
 const router = Router();
 
 // GET /api/meetings – Meetings for user's groups (optional ?group_id=X filter)
+// Super-admins see all meetings across all groups
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (currentUser?.isSuperAdmin) {
+      // Super-admins see all meetings
+      const groupId = req.query.group_id ? parseInt(req.query.group_id as string, 10) : undefined;
+      const where = groupId ? { groupId } : {};
+
+      const meetings = await prisma.meeting.findMany({
+        where,
+        include: {
+          group: { select: { id: true, name: true, meetingCreation: true } },
+          _count: { select: { responses: true, rsvpTokens: true } },
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      // Super-admins get 'admin' role for all groups
+      const result = meetings.map(m => ({
+        ...m,
+        userRole: 'admin' as const,
+      }));
+
+      res.json(result);
+      return;
+    }
+
     const memberships = await prisma.groupMember.findMany({
       where: { userId: req.userId },
       select: { groupId: true, role: true },
@@ -46,8 +77,38 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/meetings/my – My open meetings across all groups
+// Super-admins see all open meetings with 'admin' role
 router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (currentUser?.isSuperAdmin) {
+      const meetings = await prisma.meeting.findMany({
+        where: { frozen: false },
+        include: {
+          group: { select: { id: true, name: true, meetingCreation: true } },
+          responses: { where: { userId: req.userId } },
+          _count: { select: { responses: true } },
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      const result = meetings.map(m => ({
+        ...m,
+        hasResponded: m.responses.length > 0,
+        response: m.responses[0] || null,
+        totalResponses: m._count.responses,
+        userRole: 'admin' as const,
+      }));
+
+      res.json(result);
+      return;
+    }
+
     const memberships = await prisma.groupMember.findMany({
       where: { userId: req.userId },
       select: { groupId: true, role: true },
@@ -103,6 +164,7 @@ router.get('/group/:id', requireAuth, requireGroupMember, async (req: AuthReques
 
 // POST /api/meetings/group/:id – Create meeting
 // Permission depends on group's meetingCreation setting: 'admin' or 'all'
+// Super-admins can always create meetings
 router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseInt(req.params.id, 10);
@@ -113,13 +175,11 @@ router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) =
       return;
     }
 
-    const membership = await prisma.groupMember.findUnique({
-      where: { groupId_userId: { groupId, userId: req.userId! } },
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
     });
-    if (!membership) {
-      res.status(403).json({ error: 'Not a member of this group' });
-      return;
-    }
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) {
@@ -127,9 +187,19 @@ router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) =
       return;
     }
 
-    if (group.meetingCreation === 'admin' && membership.role !== 'admin') {
-      res.status(403).json({ error: 'Nur Admins dürfen in dieser Gruppe Treffen erstellen' });
-      return;
+    if (!currentUser?.isSuperAdmin) {
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: req.userId! } },
+      });
+      if (!membership) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
+
+      if (group.meetingCreation === 'admin' && membership.role !== 'admin') {
+        res.status(403).json({ error: 'Nur Admins dürfen in dieser Gruppe Treffen erstellen' });
+        return;
+      }
     }
 
     const meetingDate = new Date(date);
@@ -162,7 +232,7 @@ router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) =
   }
 });
 
-// GET /api/meetings/:id – Get meeting details (group members only)
+// GET /api/meetings/:id – Get meeting details (group members or super-admins)
 router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -176,6 +246,17 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
     });
     if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
+
+    // Check if user is super-admin
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (currentUser?.isSuperAdmin) {
+      res.json({ ...meeting, userRole: 'admin' });
+      return;
+    }
 
     // Check membership
     const membership = await prisma.groupMember.findUnique({

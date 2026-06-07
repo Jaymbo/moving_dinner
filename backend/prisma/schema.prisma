@@ -17,6 +17,7 @@ model User {
   notes        String?   @db.Text
   diet         String?   @db.Text
   isGuest      Boolean   @default(false) @map("is_guest")
+  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
   createdAt    DateTime  @default(now()) @map("created_at")
 
   groupMembers    GroupMember[]

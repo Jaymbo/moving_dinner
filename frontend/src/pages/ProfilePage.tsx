@@ -4,7 +4,7 @@ import { users } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { user, refreshUser, logout } = useAuth();
+  const { user, refreshUser, logout, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
   const [address, setAddress] = useState('');
@@ -73,7 +73,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h1 className="page-title">Mein Profil</h1>
+      <h1 className="page-title">Mein Profil {isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', fontSize: 14, marginLeft: 8 }}>⭐ Super-Admin</span>}</h1>
 
       <div className="card" style={{ maxWidth: 600 }}>
         {error && <div className="error-box">{error}</div>}

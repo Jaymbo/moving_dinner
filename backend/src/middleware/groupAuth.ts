@@ -4,6 +4,7 @@ import { AuthRequest } from './auth';
 
 /**
  * Checks that the authenticated user is an admin of the group specified by :groupId param.
+ * Super-admins bypass this check.
  */
 export async function requireGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   const groupId = parseInt(req.params.groupId || req.params.id, 10);
@@ -13,6 +14,15 @@ export async function requireGroupAdmin(req: AuthRequest, res: Response, next: N
   }
   if (!req.userId) {
     res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  // Super-admins bypass group checks
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (user?.isSuperAdmin) {
+    next();
     return;
   }
   const membership = await prisma.groupMember.findUnique({
@@ -27,6 +37,7 @@ export async function requireGroupAdmin(req: AuthRequest, res: Response, next: N
 
 /**
  * Checks that the authenticated user is a member of the group specified by :groupId param.
+ * Super-admins bypass this check.
  */
 export async function requireGroupMember(req: AuthRequest, res: Response, next: NextFunction) {
   const groupId = parseInt(req.params.groupId || req.params.id, 10);
@@ -36,6 +47,15 @@ export async function requireGroupMember(req: AuthRequest, res: Response, next: 
   }
   if (!req.userId) {
     res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  // Super-admins bypass group checks
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (user?.isSuperAdmin) {
+    next();
     return;
   }
   const membership = await prisma.groupMember.findUnique({
@@ -53,6 +73,7 @@ export async function requireGroupMember(req: AuthRequest, res: Response, next: 
 /**
  * Checks that the authenticated user is an admin of the group that a meeting belongs to.
  * The meeting is specified by :id param (meeting id).
+ * Super-admins bypass this check.
  */
 export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   const meetingId = parseInt(req.params.id, 10);
@@ -62,6 +83,15 @@ export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, 
   }
   if (!req.userId) {
     res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  // Super-admins bypass group checks
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (user?.isSuperAdmin) {
+    next();
     return;
   }
   const meeting = await prisma.meeting.findUnique({ where: { id: meetingId }, select: { groupId: true } });
@@ -81,10 +111,20 @@ export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, 
 
 /**
  * Checks that the authenticated user is an admin of at least one group.
+ * Super-admins bypass this check.
  */
 export async function requireAnyGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.userId) {
     res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  // Super-admins bypass group checks
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (user?.isSuperAdmin) {
+    next();
     return;
   }
   const adminMembership = await prisma.groupMember.findFirst({

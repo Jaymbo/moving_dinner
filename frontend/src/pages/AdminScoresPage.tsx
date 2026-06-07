@@ -70,7 +70,7 @@ export default function AdminScoresPage() {
             {userList.map((u: any, i: number) => (
               <tr key={u.id}>
                 <td>{i + 1}</td>
-                <td>{u.name} {u.isGuest && <span className="badge badge-yellow">Gast</span>}</td>
+                <td>{u.name} {u.isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', marginLeft: 4 }}>⭐</span>} {u.isGuest && <span className="badge badge-yellow">Gast</span>}</td>
                 <td>{u.scores?.participations ?? 0}</td>
                 <td>{u.scores?.hostings ?? 0}</td>
                 <td>{u.scores?.hostedGuests ?? 0}</td>

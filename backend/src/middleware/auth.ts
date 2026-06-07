@@ -6,6 +6,7 @@ import prisma from '../db';
 export interface AuthRequest extends Request {
   userId?: number;
   userRole?: string;  // role in the current group context (set by groupAuth middleware)
+  isSuperAdmin?: boolean; // set by requireSuperAdmin middleware
 }
 
 /**
@@ -50,6 +51,27 @@ export function optionalAuth(req: AuthRequest, _res: Response, next: NextFunctio
  */
 export function generateToken(userId: number): string {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '30d' });
+}
+
+/**
+ * Super-Admin-only middleware.
+ * Checks if the authenticated user has isSuperAdmin = true in the database.
+ */
+export async function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.userId) {
+    res.status(401).json({ error: 'Authorization required' });
+    return;
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (!user || !user.isSuperAdmin) {
+    res.status(403).json({ error: 'Super-Admin access required' });
+    return;
+  }
+  req.isSuperAdmin = true;
+  next();
 }
 
 /**

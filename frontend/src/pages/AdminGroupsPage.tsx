@@ -201,6 +201,14 @@ export default function AdminGroupsPage() {
     return g.role || 'member';
   }
 
+  // Check if user is actually a member of the group (not just super-admin bypass)
+  function isActualMember(g: any): boolean {
+    if (g.members) {
+      return g.members.some((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id);
+    }
+    return false;
+  }
+
   const displayGroups = myGroups;
 
   return (
@@ -280,7 +288,7 @@ export default function AdminGroupsPage() {
           {displayGroups.map((g: any) => {
             const myRole = getMyRole(g);
             const isAdmin = myRole === 'admin';
-            const isMember = myRole === 'member' || isAdmin;
+            const isMember = isActualMember(g);
 
             return (
               <div key={g.id} className="card">
@@ -325,7 +333,7 @@ export default function AdminGroupsPage() {
                       🎯 Treffen erstellen: <strong>{g.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
                     </p>
                     <div className="flex gap-2">
-                      {isMember && (
+                      {(isMember || isAdmin) && (
                         <button className="btn-sm" onClick={() => handleSelectGroup(g.id)}>
                           {selectedGroup === g.id ? '✕ Schließen' : '👁️ Details'}
                         </button>
@@ -356,7 +364,7 @@ export default function AdminGroupsPage() {
                           const isSelf = memberId === user?.id;
                           return (
                             <tr key={m.id}>
-                              <td>{m.user.name} {m.user.isGuest && <span className="badge badge-yellow">Gast</span>} {isSelf && <span className="text-sm text-muted">(du)</span>}</td>
+                              <td>{m.user.name} {m.user.isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', marginLeft: 2 }}>⭐</span>} {m.user.isGuest && <span className="badge badge-yellow">Gast</span>} {isSelf && <span className="text-sm text-muted">(du)</span>}</td>
                               <td className="text-sm">{m.user.email}</td>
                               <td>
                                 <span className="badge badge-blue">{m.role}</span>

@@ -25,6 +25,7 @@ async function main() {
       address: 'Musterstraße 1, 12345 Stadt',
       maxGuests: 4,
       isGuest: false,
+      isSuperAdmin: true,
     },
   });
 

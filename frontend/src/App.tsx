@@ -24,15 +24,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, isAdminAnywhere } = useAuth();
+  const { user, loading, isAdminAnywhere, isSuperAdmin } = useAuth();
   if (loading) return <div className="loading">Laden...</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdminAnywhere) return <Navigate to="/" replace />;
+  if (!isAdminAnywhere && !isSuperAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, isSuperAdmin } = useAuth();
+  if (loading) return <div className="loading">Laden...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 export default function App() {
-  const { user, loading, logout, isAdminAnywhere } = useAuth();
+  const { user, loading, logout, isAdminAnywhere, isSuperAdmin } = useAuth();
 
   if (loading) return <div className="loading">Laden...</div>;
 
@@ -49,19 +57,19 @@ export default function App() {
               <NavLink to="/groups" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 Gruppen
               </NavLink>
-              {isAdminAnywhere && (
+              {(isAdminAnywhere || isSuperAdmin) && (
                 <NavLink to="/admin/meetings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                   Admin
                 </NavLink>
               )}
-              {isAdminAnywhere && (
+              {isSuperAdmin && (
                 <NavLink to="/admin/feature-requests" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                   📬 Requests
                 </NavLink>
               )}
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted">Hallo, {user.name}</span>
+              <span className="text-sm text-muted">Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}</span>
               <NavLink to="/profile" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 Profil
               </NavLink>
@@ -85,7 +93,7 @@ export default function App() {
           <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
           <Route path="/admin/scores" element={<AdminRoute><AdminScoresPage /></AdminRoute>} />
           <Route path="/admin/assignment/:meetingId" element={<AdminRoute><AdminAssignmentPage /></AdminRoute>} />
-          <Route path="/admin/feature-requests" element={<AdminRoute><AdminFeatureRequestsPage /></AdminRoute>} />
+          <Route path="/admin/feature-requests" element={<SuperAdminRoute><AdminFeatureRequestsPage /></SuperAdminRoute>} />
         </Routes>
       </main>
       {user && <FeatureRequestChatWidget />}

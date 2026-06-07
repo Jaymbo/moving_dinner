@@ -1,11 +1,10 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireAnyGroupAdmin } from '../middleware/groupAuth';
+import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// POST /api/feature-requests – Create a new feature request or bug report
+// POST /api/feature-requests - Create a new feature request or bug report
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { type, title, description } = req.body;
@@ -36,8 +35,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/feature-requests – List all feature requests (with optional filters)
-router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/feature-requests - List all feature requests (Super-Admin only)
+router.get('/', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { status, type } = req.query;
 
@@ -60,7 +59,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/feature-requests/my – Get current user's requests
+// GET /api/feature-requests/my - Get current user's own requests
 router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const requests = await prisma.featureRequest.findMany({
@@ -75,8 +74,8 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /api/feature-requests/:id – Update status/priority (any group admin)
-router.patch('/:id', requireAuth, requireAnyGroupAdmin, async (req: AuthRequest, res: Response) => {
+// PATCH /api/feature-requests/:id - Update status/priority (Super-Admin only)
+router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
@@ -111,7 +110,7 @@ router.patch('/:id', requireAuth, requireAnyGroupAdmin, async (req: AuthRequest,
   }
 });
 
-// DELETE /api/feature-requests/:id – Delete a feature request (any group admin or owner)
+// DELETE /api/feature-requests/:id - Delete a feature request (Super-Admin only, or owner can delete their own)
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -120,13 +119,14 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const existing = await prisma.featureRequest.findUnique({ where: { id } });
     if (!existing) { res.status(404).json({ error: 'Feature request not found' }); return; }
 
-    // Check if user is owner or any group admin
+    // Check if user is the owner or a super admin
     if (existing.userId !== req.userId) {
-      const adminMembership = await prisma.groupMember.findFirst({
-        where: { userId: req.userId!, role: 'admin' },
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId! },
+        select: { isSuperAdmin: true },
       });
-      if (!adminMembership) {
-        res.status(403).json({ error: 'Only the author or a group admin can delete this request' });
+      if (!user?.isSuperAdmin) {
+        res.status(403).json({ error: 'Only the author or a Super-Admin can delete this request' });
         return;
       }
     }
