@@ -61,7 +61,7 @@ ok "Datenbank ist bereit"
 info "Warte auf Backend (Migration + Seed) …"
 MAX_WAIT=90
 WAITED=0
-until curl -sf http://localhost:3001/ > /dev/null 2>&1; do
+until curl -sf http://localhost:3002/ > /dev/null 2>&1; do
   WAITED=$((WAITED + 1))
   if [ "$WAITED" -ge "$MAX_WAIT" ]; then
     err "Backend antwortet nach ${MAX_WAIT}s nicht – Abbruch"
@@ -92,7 +92,7 @@ echo -e "${GREEN}  🎉  Moving Dinner ist bereit!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${CYAN}Frontend:${NC}  http://localhost:3000"
-echo -e "  ${CYAN}Backend:${NC}   http://localhost:3001"
+echo -e "  ${CYAN}Backend:${NC}   http://localhost:3002"
 echo -e "  ${CYAN}DB:${NC}        postgresql://movingdinner:movingdinner@localhost:5432/movingdinner"
 echo -e "  ${CYAN}DB-Dateien:${NC} ./data/db/ (liegen auf dem Host)"
 echo ""
