@@ -61,7 +61,7 @@ ok "Datenbank ist bereit"
 info "Warte auf Backend (Migration + Seed) …"
 MAX_WAIT=90
 WAITED=0
-until curl -sf http://localhost:3002/ > /dev/null 2>&1; do
+until curl -sf http://localhost:3002/api/health > /dev/null 2>&1; do
   WAITED=$((WAITED + 1))
   if [ "$WAITED" -ge "$MAX_WAIT" ]; then
     err "Backend antwortet nach ${MAX_WAIT}s nicht – Abbruch"
