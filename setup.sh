@@ -73,7 +73,18 @@ done
 ok "Backend ist bereit"
 
 # ----------------------------------------------------------
-# 6) Fertig!
+# 6) Lokale Abhängigkeiten für IDE-Support installieren
+# ----------------------------------------------------------
+info "Installiere lokale Abhängigkeiten (Frontend) …"
+(cd frontend && npm install)
+ok "Frontend-Abhängigkeiten installiert"
+
+info "Installiere lokale Abhängigkeiten (Backend) …"
+(cd backend && npm install)
+ok "Backend-Abhängigkeiten installiert"
+
+# ----------------------------------------------------------
+# 7) Fertig!
 # ----------------------------------------------------------
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
