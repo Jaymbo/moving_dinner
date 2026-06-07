@@ -1,27 +1,44 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireGroupAdmin, requireGroupMember } from '../middleware/groupAuth';
+import { requireGroupMember, requireMeetingGroupAdmin } from '../middleware/groupAuth';
 import { generateRsvpTokens } from '../services/rsvp';
 import { notifyGroupNewMeeting } from '../services/email';
 
 const router = Router();
 
-// GET /api/meetings – All meetings (admin, optional ?group_id=X filter)
+// GET /api/meetings – Meetings for user's groups (optional ?group_id=X filter)
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const memberships = await prisma.groupMember.findMany({
+      where: { userId: req.userId },
+      select: { groupId: true, role: true },
+    });
+    const groupIds = memberships.map(m => m.groupId);
+    const roleMap = new Map(memberships.map(m => [m.groupId, m.role]));
+
     const groupId = req.query.group_id ? parseInt(req.query.group_id as string, 10) : undefined;
-    const where = groupId ? { groupId } : {};
+    if (groupId && !groupIds.includes(groupId)) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+    const where = groupId ? { groupId } : { groupId: { in: groupIds } };
 
     const meetings = await prisma.meeting.findMany({
       where,
       include: {
-        group: { select: { id: true, name: true } },
+        group: { select: { id: true, name: true, meetingCreation: true } },
         _count: { select: { responses: true, rsvpTokens: true } },
       },
       orderBy: { date: 'asc' },
     });
-    res.json(meetings);
+
+    const result = meetings.map(m => ({
+      ...m,
+      userRole: roleMap.get(m.groupId) || 'member',
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error('List meetings error:', err);
     res.status(500).json({ error: 'Failed to list meetings' });
@@ -31,12 +48,12 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // GET /api/meetings/my – My open meetings across all groups
 router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    // Get all group memberships
     const memberships = await prisma.groupMember.findMany({
       where: { userId: req.userId },
-      select: { groupId: true },
+      select: { groupId: true, role: true },
     });
     const groupIds = memberships.map(m => m.groupId);
+    const roleMap = new Map(memberships.map(m => [m.groupId, m.role]));
 
     const meetings = await prisma.meeting.findMany({
       where: {
@@ -44,17 +61,17 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
         frozen: false,
       },
       include: {
-        group: { select: { id: true, name: true } },
+        group: { select: { id: true, name: true, meetingCreation: true } },
         responses: { where: { userId: req.userId } },
       },
       orderBy: { date: 'asc' },
     });
 
-    // Add response status
     const result = meetings.map(m => ({
       ...m,
       hasResponded: m.responses.length > 0,
       response: m.responses[0] || null,
+      userRole: roleMap.get(m.groupId) || 'member',
     }));
 
     res.json(result);
@@ -64,7 +81,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/groups/:id/meetings – All meetings for a group
+// GET /api/meetings/group/:id – All meetings for a group
 router.get('/group/:id', requireAuth, requireGroupMember, async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseInt(req.params.id, 10);
@@ -82,15 +99,34 @@ router.get('/group/:id', requireAuth, requireGroupMember, async (req: AuthReques
   }
 });
 
-// POST /api/groups/:id/meetings – Create meeting (group admin)
-// Note: Using /group/:id/meetings to avoid conflict with /meetings/:id
-router.post('/group/:id', requireAuth, requireGroupAdmin, async (req: AuthRequest, res: Response) => {
+// POST /api/meetings/group/:id – Create meeting
+// Permission depends on group's meetingCreation setting: 'admin' or 'all'
+router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseInt(req.params.id, 10);
     const { date, deadline } = req.body;
 
     if (!date || !deadline) {
       res.status(400).json({ error: 'date and deadline are required' });
+      return;
+    }
+
+    const membership = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId: req.userId! } },
+    });
+    if (!membership) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    const group = await prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    if (group.meetingCreation === 'admin' && membership.role !== 'admin') {
+      res.status(403).json({ error: 'Nur Admins dürfen in dieser Gruppe Treffen erstellen' });
       return;
     }
 
@@ -111,10 +147,8 @@ router.post('/group/:id', requireAuth, requireGroupAdmin, async (req: AuthReques
       },
     });
 
-    // Generate RSVP tokens for all group members
     await generateRsvpTokens(meeting.id, groupId);
 
-    // Send notification emails in background
     notifyGroupNewMeeting(groupId, meeting.id, meetingDate, meetingDeadline).catch(err =>
       console.error('Failed to send meeting notifications:', err)
     );
@@ -126,7 +160,7 @@ router.post('/group/:id', requireAuth, requireGroupAdmin, async (req: AuthReques
   }
 });
 
-// GET /api/meetings/:id
+// GET /api/meetings/:id – Get meeting details (group members only)
 router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -135,20 +169,30 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const meeting = await prisma.meeting.findUnique({
       where: { id },
       include: {
-        group: { select: { id: true, name: true } },
+        group: { select: { id: true, name: true, meetingCreation: true } },
         responses: { include: { user: { select: { id: true, name: true, diet: true, address: true } } } },
       },
     });
     if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    res.json(meeting);
+
+    // Check membership
+    const membership = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId: meeting.groupId, userId: req.userId! } },
+    });
+    if (!membership) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    res.json({ ...meeting, userRole: membership.role });
   } catch (err) {
     console.error('Get meeting error:', err);
     res.status(500).json({ error: 'Failed to get meeting' });
   }
 });
 
-// PUT /api/meetings/:id – Edit meeting
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+// PUT /api/meetings/:id – Edit meeting (group admin only)
+router.put('/:id', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { date, deadline } = req.body;
@@ -171,8 +215,8 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/meetings/:id
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+// DELETE /api/meetings/:id (group admin only)
+router.delete('/:id', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
 

@@ -18,20 +18,21 @@ export function generateJoinCode(): string {
 /**
  * Create a new group with the creator as admin.
  */
-export async function createGroup(name: string, description: string | null, createdBy: number): Promise<{ id: number; inviteCode: string }> {
+export async function createGroup(name: string, description: string | null, createdBy: number, meetingCreation: string = 'admin'): Promise<{ id: number; inviteCode: string }> {
   const inviteCode = generateInviteCode();
   const group = await prisma.group.create({
     data: {
       name,
       description,
       inviteCode,
+      meetingCreation,
       createdBy,
       members: {
         create: { userId: createdBy, role: 'admin' },
       },
     },
   });
-  return { id: group.id, inviteCode: group.inviteCode }; // inviteCode is same as generated
+  return { id: group.id, inviteCode: group.inviteCode };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireMeetingGroupAdmin } from '../middleware/groupAuth';
 import { assignHosts } from '../services/assignment';
 import { recalculateScores } from '../services/scoring';
 import { recalculateMatrix } from '../services/matrix';
@@ -10,7 +11,7 @@ import { generateRsvpTokens } from '../services/rsvp';
 const router = Router();
 
 // POST /api/admin/meetings/:id/freeze – Freeze a meeting and send emails
-router.post('/meetings/:id/freeze', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/meetings/:id/freeze', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const meetingId = parseInt(req.params.id, 10);
     if (isNaN(meetingId)) { res.status(400).json({ error: 'Invalid meeting id' }); return; }
@@ -49,7 +50,7 @@ router.post('/meetings/:id/freeze', requireAuth, async (req: AuthRequest, res: R
 });
 
 // POST /api/admin/meetings/:id/remind – Send deadline reminder manually
-router.post('/meetings/:id/remind', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/meetings/:id/remind', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const meetingId = parseInt(req.params.id, 10);
     if (isNaN(meetingId)) { res.status(400).json({ error: 'Invalid meeting id' }); return; }
@@ -80,7 +81,7 @@ router.post('/recalculate-scores', requireAuth, async (_req: AuthRequest, res: R
 });
 
 // POST /api/admin/meetings/:id/send-rsvp – Send RSVP emails to all group members
-router.post('/meetings/:id/send-rsvp', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/meetings/:id/send-rsvp', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const meetingId = parseInt(req.params.id, 10);
     if (isNaN(meetingId)) { res.status(400).json({ error: 'Invalid meeting id' }); return; }

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { groups, join } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminGroupsPage() {
+  const { user } = useAuth();
   const [myGroups, setMyGroups] = useState<any[]>([]);
-  const [allGroups, setAllGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newMeetingCreation, setNewMeetingCreation] = useState<string>('admin');
   const [creating, setCreating] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -19,15 +21,20 @@ export default function AdminGroupsPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [newInvMaxUses, setNewInvMaxUses] = useState('');
-  const [tab, setTab] = useState<'my' | 'all'>('my');
+  // Groups are now filtered by backend - only showing user's groups
+  const [editingGroup, setEditingGroup] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editMeetingCreation, setEditMeetingCreation] = useState<string>('admin');
 
   useEffect(() => { loadData(); }, []);
 
+  function clearMessages() { setError(''); setMessage(''); }
+
   async function loadData() {
     try {
-      const [my, all] = await Promise.all([groups.my(), groups.list()]);
+      const my = await groups.list();
       setMyGroups(my);
-      setAllGroups(all);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -38,13 +45,14 @@ export default function AdminGroupsPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
-    setError('');
+    clearMessages();
     try {
-      const result = await groups.create({ name: newName, description: newDesc || undefined });
+      const result = await groups.create({ name: newName, description: newDesc || undefined, meetingCreation: newMeetingCreation });
       setMessage(`Gruppe "${newName}" erstellt! Einladungscode: ${result.inviteCode}`);
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
+      setNewMeetingCreation('admin');
       await loadData();
     } catch (err: any) {
       setError(err.message);
@@ -54,7 +62,7 @@ export default function AdminGroupsPage() {
   }
 
   async function handleLookupCode() {
-    setError('');
+    clearMessages();
     setJoinGroup(null);
     try {
       const result = await join.lookup(joinCode);
@@ -66,7 +74,7 @@ export default function AdminGroupsPage() {
 
   async function handleJoinGroup() {
     setJoining(true);
-    setError('');
+    clearMessages();
     try {
       await join.join(joinCode);
       setMessage('Gruppe beigetreten!');
@@ -96,16 +104,45 @@ export default function AdminGroupsPage() {
 
   async function handleRemoveMember(groupId: number, userId: number) {
     if (!confirm('Mitglied wirklich entfernen?')) return;
+    clearMessages();
     try {
       await groups.removeMember(groupId, userId);
       const m = await groups.members(groupId);
       setMembers(m);
+      await loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function handleChangeRole(groupId: number, userId: number, newRole: string) {
+    clearMessages();
+    try {
+      await groups.changeRole(groupId, userId, newRole);
+      const m = await groups.members(groupId);
+      setMembers(m);
+      await loadData();
+      setMessage('Rolle geändert!');
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function handleLeaveGroup(groupId: number) {
+    if (!confirm('Möchtest du diese Gruppe wirklich verlassen?')) return;
+    clearMessages();
+    try {
+      await groups.leave(groupId);
+      setSelectedGroup(null);
+      setMessage('Gruppe verlassen!');
+      await loadData();
     } catch (err: any) {
       setError(err.message);
     }
   }
 
   async function handleCreateInvitation(groupId: number) {
+    clearMessages();
     try {
       const result = await groups.createInvitation(groupId, newInvMaxUses ? parseInt(newInvMaxUses) : undefined);
       setMessage(`Einladungscode erstellt: ${result.code}`);
@@ -119,9 +156,34 @@ export default function AdminGroupsPage() {
 
   async function handleDeleteGroup(groupId: number) {
     if (!confirm('Gruppe wirklich löschen? Alle Treffen und Anmeldungen werden gelöscht!')) return;
+    clearMessages();
     try {
       await groups.delete(groupId);
       setSelectedGroup(null);
+      setMessage('Gruppe gelöscht!');
+      await loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  function startEditGroup(g: any) {
+    setEditingGroup(g.id);
+    setEditName(g.name);
+    setEditDesc(g.description || '');
+    setEditMeetingCreation(g.meetingCreation || 'admin');
+  }
+
+  async function handleSaveGroup(groupId: number) {
+    clearMessages();
+    try {
+      await groups.update(groupId, {
+        name: editName,
+        description: editDesc || undefined,
+        meetingCreation: editMeetingCreation,
+      });
+      setEditingGroup(null);
+      setMessage('Gruppe aktualisiert!');
       await loadData();
     } catch (err: any) {
       setError(err.message);
@@ -130,7 +192,16 @@ export default function AdminGroupsPage() {
 
   if (loading) return <div className="loading">Laden...</div>;
 
-  const displayGroups = tab === 'my' ? myGroups : allGroups;
+  // Determine current user's role in a group
+  function getMyRole(g: any): string {
+    if (g.members) {
+      const m = g.members.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id);
+      if (m) return m.role;
+    }
+    return g.role || 'member';
+  }
+
+  const displayGroups = myGroups;
 
   return (
     <div>
@@ -147,7 +218,7 @@ export default function AdminGroupsPage() {
       </div>
 
       {error && <div className="error-box">{error}</div>}
-      {message && <div className="success-box">{message}</div>}
+      {message && <div className="success-box" onClick={() => setMessage('')}>{message}</div>}
 
       {showCreate && (
         <div className="card mb-4">
@@ -160,6 +231,13 @@ export default function AdminGroupsPage() {
             <div className="form-group">
               <label>Beschreibung</label>
               <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2} />
+            </div>
+            <div className="form-group">
+              <label>Wer darf Treffen erstellen?</label>
+              <select value={newMeetingCreation} onChange={e => setNewMeetingCreation(e.target.value)}>
+                <option value="admin">Nur Admins</option>
+                <option value="all">Alle Mitglieder</option>
+              </select>
             </div>
             <button type="submit" className="btn-primary" disabled={creating}>
               {creating ? 'Erstellen...' : 'Gruppe erstellen'}
@@ -191,10 +269,6 @@ export default function AdminGroupsPage() {
         </div>
       )}
 
-      <div className="flex gap-2 mb-4">
-        <button className={tab === 'my' ? 'btn-primary btn-sm' : 'btn-sm'} onClick={() => setTab('my')}>Meine Gruppen</button>
-        <button className={tab === 'all' ? 'btn-primary btn-sm' : 'btn-sm'} onClick={() => setTab('all')}>Alle Gruppen</button>
-      </div>
 
       {displayGroups.length === 0 ? (
         <div className="empty-state">
@@ -203,68 +277,142 @@ export default function AdminGroupsPage() {
         </div>
       ) : (
         <div className="grid grid-2">
-          {displayGroups.map((g: any) => (
-            <div key={g.id} className="card">
-              <div className="card-header">
-                <div>
-                  <h3>{g.name}</h3>
-                  <span className="text-sm text-muted">{g.description || 'Keine Beschreibung'}</span>
-                </div>
-                <span className="badge badge-blue">{g.role || 'Mitglied'}</span>
-              </div>
-              <p className="text-sm mb-2">
-                📋 Code: <strong>{g.inviteCode}</strong> · 👥 {g._count?.members || g.members?.length || 0} Mitglieder · 📅 {g._count?.meetings || 0} Treffen
-              </p>
-              <div className="flex gap-2">
-                <button className="btn-sm" onClick={() => handleSelectGroup(g.id)}>
-                  {selectedGroup === g.id ? '✕ Schließen' : '👁️ Details'}
-                </button>
-                <button className="btn-sm btn-danger" onClick={() => handleDeleteGroup(g.id)}>🗑️</button>
-              </div>
+          {displayGroups.map((g: any) => {
+            const myRole = getMyRole(g);
+            const isAdmin = myRole === 'admin';
+            const isMember = myRole === 'member' || isAdmin;
 
-              {selectedGroup === g.id && (
-                <div className="mt-4" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
-                  <h4>Mitglieder ({members.length})</h4>
-                  <table className="mt-2">
-                    <thead>
-                      <tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Aktion</th></tr>
-                    </thead>
-                    <tbody>
-                      {members.map((m: any) => (
-                        <tr key={m.id}>
-                          <td>{m.user.name} {m.user.isGuest && <span className="badge badge-yellow">Gast</span>}</td>
-                          <td className="text-sm">{m.user.email}</td>
-                          <td><span className="badge badge-blue">{m.role}</span></td>
-                          <td>{m.role !== 'admin' && <button className="btn-sm btn-danger" onClick={() => handleRemoveMember(g.id, m.userId)}>Entfernen</button>}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <h4 className="mt-4">Einladungscodes ({invitations.length})</h4>
-                  <div className="flex gap-2 mt-2 mb-2">
-                    <input type="number" value={newInvMaxUses} onChange={e => setNewInvMaxUses(e.target.value)} placeholder="Max. Nutzungen (leer = unbegrenzt)" style={{ width: 300 }} />
-                    <button className="btn-sm btn-primary" onClick={() => handleCreateInvitation(g.id)}>+ Neuer Code</button>
+            return (
+              <div key={g.id} className="card">
+                {editingGroup === g.id ? (
+                  /* Edit Mode */
+                  <div>
+                    <h3>✏️ Gruppe bearbeiten</h3>
+                    <div className="form-group mt-4">
+                      <label>Name</label>
+                      <input type="text" value={editName} onChange={e => setEditName(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Beschreibung</label>
+                      <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={2} />
+                    </div>
+                    <div className="form-group">
+                      <label>Wer darf Treffen erstellen?</label>
+                      <select value={editMeetingCreation} onChange={e => setEditMeetingCreation(e.target.value)}>
+                        <option value="admin">Nur Admins</option>
+                        <option value="all">Alle Mitglieder</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button className="btn-primary" onClick={() => handleSaveGroup(g.id)}>💾 Speichern</button>
+                      <button className="btn-sm" onClick={() => setEditingGroup(null)}>Abbrechen</button>
+                    </div>
                   </div>
-                  {invitations.length > 0 && (
-                    <table>
-                      <thead><tr><th>Code</th><th>Max</th><th>Verwendet</th><th>Gültig bis</th></tr></thead>
+                ) : (
+                  /* Display Mode */
+                  <div>
+                    <div className="card-header">
+                      <div>
+                        <h3>{g.name}</h3>
+                        <span className="text-sm text-muted">{g.description || 'Keine Beschreibung'}</span>
+                      </div>
+                      <span className="badge badge-blue">{myRole === 'admin' ? 'Admin' : 'Mitglied'}</span>
+                    </div>
+                    <p className="text-sm mb-2">
+                      📋 Code: <strong>{g.inviteCode}</strong> · 👥 {g._count?.members || g.members?.length || 0} Mitglieder · 📅 {g._count?.meetings || 0} Treffen
+                    </p>
+                    <p className="text-sm mb-2">
+                      🎯 Treffen erstellen: <strong>{g.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
+                    </p>
+                    <div className="flex gap-2">
+                      {isMember && (
+                        <button className="btn-sm" onClick={() => handleSelectGroup(g.id)}>
+                          {selectedGroup === g.id ? '✕ Schließen' : '👁️ Details'}
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button className="btn-sm" onClick={() => startEditGroup(g)}>✏️ Bearbeiten</button>
+                          <button className="btn-sm btn-danger" onClick={() => handleDeleteGroup(g.id)}>🗑️</button>
+                        </>
+                      )}
+                      {isMember && (
+                        <button className="btn-sm btn-danger" onClick={() => handleLeaveGroup(g.id)}>🚪 Verlassen</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedGroup === g.id && (
+                  <div className="mt-4" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
+                    <h4>Mitglieder ({members.length})</h4>
+                    <table className="mt-2">
+                      <thead>
+                        <tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Aktion</th></tr>
+                      </thead>
                       <tbody>
-                        {invitations.map((inv: any) => (
-                          <tr key={inv.id}>
-                            <td><strong>{inv.code}</strong></td>
-                            <td>{inv.maxUses || '∞'}</td>
-                            <td>{inv.usedCount}</td>
-                            <td>{inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString('de-DE') : 'Unbegrenzt'}</td>
-                          </tr>
-                        ))}
+                        {members.map((m: any) => {
+                          const memberId = m.userId || m.user?.id;
+                          const isSelf = memberId === user?.id;
+                          return (
+                            <tr key={m.id}>
+                              <td>{m.user.name} {m.user.isGuest && <span className="badge badge-yellow">Gast</span>} {isSelf && <span className="text-sm text-muted">(du)</span>}</td>
+                              <td className="text-sm">{m.user.email}</td>
+                              <td>
+                                <span className="badge badge-blue">{m.role}</span>
+                              </td>
+                              <td>
+                                {isAdmin && !isSelf && (
+                                  <div className="flex gap-1">
+                                    {m.role === 'member' && (
+                                      <button className="btn-sm" onClick={() => handleChangeRole(g.id, memberId, 'admin')} title="Zum Admin machen">
+                                        👑 Admin
+                                      </button>
+                                    )}
+                                    {m.role === 'admin' && (
+                                      <button className="btn-sm" onClick={() => handleChangeRole(g.id, memberId, 'member')} title="Zum Mitglied machen">
+                                        👤 Mitglied
+                                      </button>
+                                    )}
+                                    <button className="btn-sm btn-danger" onClick={() => handleRemoveMember(g.id, memberId)}>Entfernen</button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+
+                    {isAdmin && (
+                      <>
+                        <h4 className="mt-4">Einladungscodes ({invitations.length})</h4>
+                        <div className="flex gap-2 mt-2 mb-2">
+                          <input type="number" value={newInvMaxUses} onChange={e => setNewInvMaxUses(e.target.value)} placeholder="Max. Nutzungen (leer = unbegrenzt)" style={{ width: 300 }} />
+                          <button className="btn-sm btn-primary" onClick={() => handleCreateInvitation(g.id)}>+ Neuer Code</button>
+                        </div>
+                        {invitations.length > 0 && (
+                          <table>
+                            <thead><tr><th>Code</th><th>Max</th><th>Verwendet</th><th>Gültig bis</th></tr></thead>
+                            <tbody>
+                              {invitations.map((inv: any) => (
+                                <tr key={inv.id}>
+                                  <td><strong>{inv.code}</strong></td>
+                                  <td>{inv.maxUses || '∞'}</td>
+                                  <td>{inv.usedCount}</td>
+                                  <td>{inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString('de-DE') : 'Unbegrenzt'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

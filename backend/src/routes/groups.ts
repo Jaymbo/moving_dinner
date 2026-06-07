@@ -6,17 +6,22 @@ import { createGroup, createInvitation } from '../services/groups';
 
 const router = Router();
 
-// GET /api/groups – All groups (admin)
-router.get('/', requireAuth, async (_req: AuthRequest, res: Response) => {
+// GET /api/groups – Groups the user is a member of
+router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const groups = await prisma.group.findMany({
+    const memberships = await prisma.groupMember.findMany({
+      where: { userId: req.userId },
       include: {
-        members: { include: { user: { select: { id: true, name: true, email: true } } } },
-        _count: { select: { meetings: true, members: true } },
+        group: {
+          include: {
+            members: { include: { user: { select: { id: true, name: true, email: true, isGuest: true } } } },
+            _count: { select: { meetings: true, members: true } },
+          },
+        },
       },
-      orderBy: { id: 'asc' },
+      orderBy: { joinedAt: 'asc' },
     });
-    res.json(groups);
+    res.json(memberships.map(m => ({ ...m.group, role: m.role })));
   } catch (err) {
     console.error('List groups error:', err);
     res.status(500).json({ error: 'Failed to list groups' });
@@ -38,7 +43,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/groups/:id
-router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.get('/:id', requireAuth, requireGroupMember, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
@@ -61,11 +66,12 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /api/groups – Create group
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, meetingCreation } = req.body;
     if (!name) { res.status(400).json({ error: 'name is required' }); return; }
 
-    const result = await createGroup(name, description || null, req.userId!);
-    res.status(201).json({ id: result.id, inviteCode: result.inviteCode });
+    const mc = meetingCreation === 'all' ? 'all' : 'admin';
+    const result = await createGroup(name, description || null, req.userId!, mc);
+    res.status(201).json({ id: result.id, inviteCode: result.inviteCode, meetingCreation: mc });
   } catch (err) {
     console.error('Create group error:', err);
     res.status(500).json({ error: 'Failed to create group' });
@@ -76,19 +82,62 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, requireGroupAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { name, description } = req.body;
+    const { name, description, meetingCreation } = req.body;
+
+    if (meetingCreation !== undefined && !['admin', 'all'].includes(meetingCreation)) {
+      res.status(400).json({ error: 'meetingCreation must be "admin" or "all"' });
+      return;
+    }
 
     const group = await prisma.group.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
+        ...(meetingCreation !== undefined && { meetingCreation }),
       },
     });
     res.json(group);
   } catch (err) {
     console.error('Update group error:', err);
     res.status(500).json({ error: 'Failed to update group' });
+  }
+});
+
+// POST /api/groups/:id/leave – Leave group (self)
+router.post('/:id/leave', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { res.status(400).json({ error: 'Invalid group id' }); return; }
+
+    const membership = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId: id, userId: req.userId! } },
+    });
+
+    if (!membership) {
+      res.status(404).json({ error: 'You are not a member of this group' });
+      return;
+    }
+
+    // Check if user is the last admin
+    if (membership.role === 'admin') {
+      const adminCount = await prisma.groupMember.count({
+        where: { groupId: id, role: 'admin' },
+      });
+      if (adminCount <= 1) {
+        res.status(400).json({ error: 'Du bist der letzte Admin. Bitte übertrage die Admin-Rolle an ein anderes Mitglied oder lösche die Gruppe.' });
+        return;
+      }
+    }
+
+    await prisma.groupMember.delete({
+      where: { groupId_userId: { groupId: id, userId: req.userId! } },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Leave group error:', err);
+    res.status(500).json({ error: 'Failed to leave group' });
   }
 });
 
@@ -139,6 +188,45 @@ router.post('/:id/members', requireAuth, requireGroupAdmin, async (req: AuthRequ
   } catch (err) {
     console.error('Add member error:', err);
     res.status(500).json({ error: 'Failed to add member' });
+  }
+});
+
+// PUT /api/groups/:id/members/:uid/role – Change member role (admin)
+router.put('/:id/members/:uid/role', requireAuth, requireGroupAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const uid = parseInt(req.params.uid, 10);
+    const { role } = req.body;
+
+    if (!['admin', 'member'].includes(role)) {
+      res.status(400).json({ error: 'Role must be "admin" or "member"' });
+      return;
+    }
+
+    const target = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId: id, userId: uid } },
+    });
+    if (!target) { res.status(404).json({ error: 'Member not found' }); return; }
+
+    // Demoting yourself: check you're not the last admin
+    if (target.userId === req.userId && target.role === 'admin' && role === 'member') {
+      const adminCount = await prisma.groupMember.count({
+        where: { groupId: id, role: 'admin' },
+      });
+      if (adminCount <= 1) {
+        res.status(400).json({ error: 'Du bist der letzte Admin. Bitte übertrage die Admin-Rolle an ein anderes Mitglied.' });
+        return;
+      }
+    }
+
+    const updated = await prisma.groupMember.update({
+      where: { groupId_userId: { groupId: id, userId: uid } },
+      data: { role },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('Change role error:', err);
+    res.status(500).json({ error: 'Failed to change role' });
   }
 });
 

@@ -72,13 +72,14 @@ export const groups = {
   list: () => request<any[]>('/groups'),
   my: () => request<any[]>('/groups/my'),
   get: (id: number) => request<any>(`/groups/${id}`),
-  create: (data: { name: string; description?: string }) =>
+  create: (data: { name: string; description?: string; meetingCreation?: string }) =>
     request<{ id: number; inviteCode: string }>('/groups', {
       method: 'POST', body: JSON.stringify(data),
     }),
-  update: (id: number, data: { name?: string; description?: string }) =>
+  update: (id: number, data: { name?: string; description?: string; meetingCreation?: string }) =>
     request<any>(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request<{ success: boolean }>(`/groups/${id}`, { method: 'DELETE' }),
+  leave: (id: number) => request<{ success: boolean }>(`/groups/${id}/leave`, { method: 'POST' }),
   members: (id: number) => request<any[]>(`/groups/${id}/members`),
   addMember: (groupId: number, userId: number, role?: string) =>
     request<any>(`/groups/${groupId}/members`, {
@@ -86,6 +87,8 @@ export const groups = {
     }),
   removeMember: (groupId: number, userId: number) =>
     request<{ success: boolean }>(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
+  changeRole: (groupId: number, userId: number, role: string) =>
+    request<any>(`/groups/${groupId}/members/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
   createInvitation: (groupId: number, maxUses?: number, expiresAt?: string) =>
     request<{ code: string }>(`/groups/${groupId}/invitations`, {
       method: 'POST', body: JSON.stringify({ maxUses, expiresAt }),
@@ -168,4 +171,17 @@ export const publicApi = {
     request<{ success: boolean; userId: number; isGuest: boolean }>(`/public/meetings/${meetingId}/register`, {
       method: 'POST', body: JSON.stringify(data),
     }),
+};
+
+// Feature Requests
+export const featureRequests = {
+  create: (data: { type: string; title: string; description: string }) =>
+    request<any>('/feature-requests', { method: 'POST', body: JSON.stringify(data) }),
+  list: (filters?: { status?: string; type?: string }) =>
+    request<any[]>(`/feature-requests${filters ? `?${new URLSearchParams(filters as any).toString()}` : ''}`),
+  my: () => request<any[]>('/feature-requests/my'),
+  update: (id: number, data: { status?: string; priority?: string }) =>
+    request<any>(`/feature-requests/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    request<{ success: boolean }>(`/feature-requests/${id}`, { method: 'DELETE' }),
 };

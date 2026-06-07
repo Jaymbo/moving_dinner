@@ -108,6 +108,7 @@ export default function AdminAssignmentPage() {
     acc[r.hostWish] = (acc[r.hostWish] || 0) + 1;
     return acc;
   }, {});
+  const isAdmin = meeting.userRole === 'admin';
 
   return (
     <div>
@@ -130,7 +131,7 @@ export default function AdminAssignmentPage() {
         </div>
       </div>
 
-      {!meeting.frozen && (
+      {!meeting.frozen && isAdmin && (
         <div className="flex gap-2 mb-4">
           <button className="btn-primary" onClick={handleAutoAssign} disabled={assigning}>
             {assigning ? 'Berechne...' : '🔄 Automatische Zuweisung'}
@@ -158,7 +159,7 @@ export default function AdminAssignmentPage() {
                         {g.user?.name || 'Unbekannt'}
                         {g.user?.diet && <span className="text-sm text-muted"> ({g.user.diet})</span>}
                       </span>
-                      {!meeting.frozen && Object.keys(assignmentData.hostGroups).length > 1 && (
+                      {!meeting.frozen && isAdmin && Object.keys(assignmentData.hostGroups).length > 1 && (
                         <select
                           value={hostId}
                           onChange={e => handleMoveGuest(g.userId, parseInt(e.target.value))}

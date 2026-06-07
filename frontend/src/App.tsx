@@ -10,9 +10,11 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminScoresPage from './pages/AdminScoresPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
 import AdminAssignmentPage from './pages/AdminAssignmentPage';
+import AdminFeatureRequestsPage from './pages/AdminFeatureRequestsPage';
 import RsvpPage from './pages/RsvpPage';
 import JoinGroupPage from './pages/JoinGroupPage';
 import PublicRegisterPage from './pages/PublicRegisterPage';
+import FeatureRequestChatWidget from './components/FeatureRequestChatWidget';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -42,6 +44,9 @@ export default function App() {
               <NavLink to="/admin/meetings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 Admin
               </NavLink>
+              <NavLink to="/admin/feature-requests" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                📬 Requests
+              </NavLink>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted">Hallo, {user.name}</span>
@@ -68,8 +73,10 @@ export default function App() {
           <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
           <Route path="/admin/scores" element={<ProtectedRoute><AdminScoresPage /></ProtectedRoute>} />
           <Route path="/admin/assignment/:meetingId" element={<ProtectedRoute><AdminAssignmentPage /></ProtectedRoute>} />
+          <Route path="/admin/feature-requests" element={<ProtectedRoute><AdminFeatureRequestsPage /></ProtectedRoute>} />
         </Routes>
       </main>
+      {user && <FeatureRequestChatWidget />}
     </div>
   );
 }

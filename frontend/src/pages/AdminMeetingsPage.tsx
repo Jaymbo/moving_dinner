@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { meetings, groups, admin } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminMeetingsPage() {
+  const { user } = useAuth();
   const [meetingList, setMeetingList] = useState<any[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [creatableGroups, setCreatableGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -20,7 +23,12 @@ export default function AdminMeetingsPage() {
       const [m, g] = await Promise.all([meetings.list(), groups.my()]);
       setMeetingList(m);
       setMyGroups(g);
-      if (g.length > 0 && !newGroupId) setNewGroupId(g[0].id);
+      const creatable = g.filter((group: any) => {
+        const role = group.role || (group.members?.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id)?.role);
+        return group.meetingCreation === 'all' || role === 'admin';
+      });
+      setCreatableGroups(creatable);
+      if (creatable.length > 0 && !newGroupId) setNewGroupId(creatable[0].id);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -94,7 +102,7 @@ export default function AdminMeetingsPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="page-title" style={{ marginBottom: 0 }}>Treffen verwalten</h1>
-        <button className="btn-primary" onClick={() => setShowCreate(!showCreate)}>
+        <button className="btn-primary" onClick={() => setShowCreate(!showCreate)} disabled={creatableGroups.length === 0}>
           {showCreate ? '✕ Abbrechen' : '+ Neues Treffen'}
         </button>
       </div>
@@ -107,11 +115,15 @@ export default function AdminMeetingsPage() {
           <form onSubmit={handleCreate} className="mt-4">
             <div className="form-group">
               <label>Gruppe</label>
-              <select value={newGroupId || ''} onChange={e => setNewGroupId(parseInt(e.target.value))}>
-                {myGroups.map((g: any) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+              {creatableGroups.length === 0 ? (
+                <p className="text-sm text-muted">Du kannst in keiner Gruppe Treffen erstellen.</p>
+              ) : (
+                <select value={newGroupId || ''} onChange={e => setNewGroupId(parseInt(e.target.value))}>
+                  {creatableGroups.map((g: any) => (
+                    <option key={g.id} value={g.id}>{g.name}{g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="form-group">
               <label>Datum</label>
@@ -121,7 +133,7 @@ export default function AdminMeetingsPage() {
               <label>Anmeldeschluss</label>
               <input type="datetime-local" value={newDeadline} onChange={e => setNewDeadline(e.target.value)} required />
             </div>
-            <button type="submit" className="btn-primary" disabled={creating}>
+            <button type="submit" className="btn-primary" disabled={creating || creatableGroups.length === 0}>
               {creating ? 'Erstellen...' : 'Treffen erstellen'}
             </button>
           </form>
@@ -146,36 +158,39 @@ export default function AdminMeetingsPage() {
             </tr>
           </thead>
           <tbody>
-            {meetingList.map((m: any) => (
-              <tr key={m.id}>
-                <td>{formatDate(m.date)}</td>
-                <td>{m.group?.name || '–'}</td>
-                <td>{formatDate(m.deadline)}</td>
-                <td>{m._count?.responses || 0}</td>
-                <td>
-                  {m.frozen ? (
-                    <span className="badge badge-gray">Abgeschlossen</span>
-                  ) : new Date(m.deadline) < new Date() ? (
-                    <span className="badge badge-yellow">Deadline vorbei</span>
-                  ) : (
-                    <span className="badge badge-green">Offen</span>
-                  )}
-                </td>
-                <td>
-                  <div className="flex gap-2">
-                    <Link to={`/admin/assignment/${m.id}`} className="btn-sm">Zuweisung</Link>
-                    {!m.frozen && (
-                      <>
-                        <button className="btn-sm" onClick={() => handleRemind(m.id)}>📧 Erinnern</button>
-                        <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>📨 RSVP</button>
-                        <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>🔒 Freeze</button>
-                        <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️</button>
-                      </>
+            {meetingList.map((m: any) => {
+              const isAdmin = m.userRole === 'admin';
+              return (
+                <tr key={m.id}>
+                  <td>{formatDate(m.date)}</td>
+                  <td>{m.group?.name || '–'}</td>
+                  <td>{formatDate(m.deadline)}</td>
+                  <td>{m._count?.responses || 0}</td>
+                  <td>
+                    {m.frozen ? (
+                      <span className="badge badge-gray">Abgeschlossen</span>
+                    ) : new Date(m.deadline) < new Date() ? (
+                      <span className="badge badge-yellow">Deadline vorbei</span>
+                    ) : (
+                      <span className="badge badge-green">Offen</span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    <div className="flex gap-2">
+                      <Link to={`/admin/assignment/${m.id}`} className="btn-sm">Zuweisung</Link>
+                      {isAdmin && !m.frozen && (
+                        <>
+                          <button className="btn-sm" onClick={() => handleRemind(m.id)}>📧 Erinnern</button>
+                          <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>📨 RSVP</button>
+                          <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>🔒 Freeze</button>
+                          <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

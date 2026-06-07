@@ -5,7 +5,7 @@ import prisma from '../db';
 
 export interface AuthRequest extends Request {
   userId?: number;
-  userRole?: string;
+  userRole?: string;  // role in the current group context (set by groupAuth middleware)
 }
 
 /**

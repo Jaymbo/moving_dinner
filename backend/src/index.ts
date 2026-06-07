@@ -14,6 +14,7 @@ import rsvpRoutes from './routes/rsvp';
 import assignmentRoutes from './routes/assignment';
 import publicRoutes from './routes/public';
 import adminRoutes from './routes/admin';
+import featureRequestRoutes from './routes/featureRequests';
 
 // Jobs
 import { startJobs } from './jobs';
@@ -34,11 +35,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/join', joinRoutes);
 app.use('/api/meetings', meetingRoutes);
-app.use('/api/responses', responseRoutes);
+app.use('/api/meetings', responseRoutes);
 app.use('/api/rsvp', rsvpRoutes);
 app.use('/api/assignment', assignmentRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/feature-requests', featureRequestRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

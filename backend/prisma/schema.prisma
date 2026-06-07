@@ -28,17 +28,19 @@ model User {
   createdMeetings Meeting[]      @relation("MeetingCreator")
   createdGroups   Group[]        @relation("GroupCreator")
   assignedHosts   Response[]     @relation("AssignedHost")
+  featureRequests FeatureRequest[]
 
   @@map("users")
 }
 
 model Group {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(100)
-  description String?   @db.Text
-  inviteCode  String    @unique @map("invite_code") @db.VarChar(20)
-  createdBy   Int?      @map("created_by")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(100)
+  description     String?   @db.Text
+  inviteCode      String    @unique @map("invite_code") @db.VarChar(20)
+  meetingCreation String    @default("admin") @map("meeting_creation") @db.VarChar(20)
+  createdBy       Int?      @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   creator     User?          @relation("GroupCreator", fields: [createdBy], references: [id])
   members     GroupMember[]
@@ -149,4 +151,20 @@ model MeetupMatrix {
   @@id([userAId, userBId])
   // CHECK constraint added via migration: user_a_id < user_b_id
   @@map("meetup_matrix")
+}
+
+model FeatureRequest {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @map("user_id")
+  type        String   @db.VarChar(20)
+  title       String   @db.VarChar(200)
+  description String   @db.Text
+  status      String   @default("open") @db.VarChar(20)
+  priority    String   @default("low") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("feature_requests")
 }
