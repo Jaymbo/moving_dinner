@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(100)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String?   @map("password_hash") @db.Text
+  address      String?   @db.Text
+  maxGuests    Int       @default(0) @map("max_guests")
+  notes        String?   @db.Text
+  diet         String?   @db.Text
+  isGuest      Boolean   @default(false) @map("is_guest")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  groupMembers    GroupMember[]
+  rsvpTokens      RsvpToken[]
+  responses       Response[]
+  scores          Score?
+  meetupMatrixA   MeetupMatrix[] @relation("UserA")
+  meetupMatrixB   MeetupMatrix[] @relation("UserB")
+  createdMeetings Meeting[]      @relation("MeetingCreator")
+  createdGroups   Group[]        @relation("GroupCreator")
+  assignedHosts   Response[]     @relation("AssignedHost")
+
+  @@map("users")
+}
+
+model Group {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  inviteCode  String    @unique @map("invite_code") @db.VarChar(20)
+  createdBy   Int?      @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  creator     User?          @relation("GroupCreator", fields: [createdBy], references: [id])
+  members     GroupMember[]
+  meetings    Meeting[]
+  invitations GroupInvitation[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id       Int      @id @default(autoincrement())
+  groupId  Int      @map("group_id")
+  userId   Int      @map("user_id")
+  role     String   @default("member") @db.VarChar(20)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupInvitation {
+  id        Int       @id @default(autoincrement())
+  groupId   Int       @map("group_id")
+  code      String    @unique @db.VarChar(20)
+  maxUses   Int?      @map("max_uses")
+  usedCount Int       @default(0) @map("used_count")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_invitations")
+}
+
+model Meeting {
+  id        Int       @id @default(autoincrement())
+  groupId   Int       @map("group_id")
+  date      DateTime  @db.Date
+  deadline  DateTime  @map("deadline")
+  frozen    Boolean   @default(false)
+  createdBy Int?      @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  group     Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator   User?        @relation("MeetingCreator", fields: [createdBy], references: [id])
+  rsvpTokens RsvpToken[]
+  responses  Response[]
+
+  @@map("meetings")
+}
+
+model RsvpToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique @db.VarChar(64)
+  meetingId Int       @map("meeting_id")
+  userId    Int       @map("user_id")
+  used      Boolean   @default(false)
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@map("rsvp_tokens")
+}
+
+model Response {
+  id            Int      @id @default(autoincrement())
+  meetingId     Int      @map("meeting_id")
+  userId        Int      @map("user_id")
+  hostWish      String   @map("host_wish") @db.VarChar(20)
+  assignedHost  Int?     @map("assigned_host")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  meeting      Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedHostUser User? @relation("AssignedHost", fields: [assignedHost], references: [id])
+
+  @@unique([meetingId, userId])
+  @@map("responses")
+}
+
+model Score {
+  id             Int    @id @default(autoincrement())
+  userId         Int    @unique @map("user_id")
+  participations Int    @default(0)
+  hostings       Int    @default(0)
+  hostedGuests   Int    @default(0) @map("hosted_guests")
+  score          Decimal @default(0) @db.Decimal
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("scores")
+}
+
+model MeetupMatrix {
+  userAId Int @map("user_a_id")
+  userBId Int @map("user_b_id")
+  count   Int @default(0)
+
+  userA User @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@id([userAId, userBId])
+  // CHECK constraint added via migration: user_a_id < user_b_id
+  @@map("meetup_matrix")
+}
