@@ -2,6 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { groups, join } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+function getJoinLink(code: string): string {
+  return `${window.location.origin}/join/${code}`;
+}
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <button className="btn-sm" onClick={handleCopy} title={text} style={{ fontSize: 12 }}>
+      {copied ? '✅ Kopiert!' : (label || '📋 Kopieren')}
+    </button>
+  );
+}
+
 export default function AdminGroupsPage() {
   const { user } = useAuth();
   const [myGroups, setMyGroups] = useState<any[]>([]);
@@ -48,7 +79,7 @@ export default function AdminGroupsPage() {
     clearMessages();
     try {
       const result = await groups.create({ name: newName, description: newDesc || undefined, meetingCreation: newMeetingCreation });
-      setMessage(`Gruppe "${newName}" erstellt! Einladungscode: ${result.inviteCode}`);
+      setMessage(`Gruppe "${newName}" erstellt! Einladungslink: ${getJoinLink(result.inviteCode)}`);
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
@@ -145,7 +176,7 @@ export default function AdminGroupsPage() {
     clearMessages();
     try {
       const result = await groups.createInvitation(groupId, newInvMaxUses ? parseInt(newInvMaxUses) : undefined);
-      setMessage(`Einladungscode erstellt: ${result.code}`);
+      setMessage(`Einladungslink erstellt: ${getJoinLink(result.code)}`);
       setNewInvMaxUses('');
       const inv = await groups.listInvitations(groupId);
       setInvitations(inv);
@@ -329,6 +360,10 @@ export default function AdminGroupsPage() {
                     <p className="text-sm mb-2">
                       📋 Code: <strong>{g.inviteCode}</strong> · 👥 {g._count?.members || g.members?.length || 0} Mitglieder · 📅 {g._count?.meetings || 0} Treffen
                     </p>
+                    <p className="text-sm mb-2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      🔗 Link: <a href={getJoinLink(g.inviteCode)} target="_blank" rel="noopener noreferrer" style={{ wordBreak: 'break-all' }}>{getJoinLink(g.inviteCode)}</a>
+                      <CopyButton text={getJoinLink(g.inviteCode)} label="📋" />
+                    </p>
                     <p className="text-sm mb-2">
                       🎯 Treffen erstellen: <strong>{g.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
                     </p>
@@ -401,14 +436,17 @@ export default function AdminGroupsPage() {
                         </div>
                         {invitations.length > 0 && (
                           <table>
-                            <thead><tr><th>Code</th><th>Max</th><th>Verwendet</th><th>Gültig bis</th></tr></thead>
+                            <thead><tr><th>Einladungslink</th><th>Max</th><th>Verwendet</th><th>Gültig bis</th><th></th></tr></thead>
                             <tbody>
                               {invitations.map((inv: any) => (
                                 <tr key={inv.id}>
-                                  <td><strong>{inv.code}</strong></td>
+                                  <td>
+                                    <a href={getJoinLink(inv.code)} target="_blank" rel="noopener noreferrer" style={{ wordBreak: 'break-all' }}>{getJoinLink(inv.code)}</a>
+                                  </td>
                                   <td>{inv.maxUses || '∞'}</td>
                                   <td>{inv.usedCount}</td>
                                   <td>{inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString('de-DE') : 'Unbegrenzt'}</td>
+                                  <td><CopyButton text={getJoinLink(inv.code)} label="📋 Link kopieren" /></td>
                                 </tr>
                               ))}
                             </tbody>
