@@ -8,7 +8,7 @@
 | Backend | Node.js + Express + TypeScript | REST-API, Business-Logik, Cron-Jobs |
 | Datenbank | PostgreSQL | Relationale Datenhaltung |
 | ORM | Prisma | Schema-Management, Migrations, Queries |
-| E-Mail | Nodemailer (SMTP, eigener Server) | Benachrichtigungen, RSVP-Links |
+| E-Mail | Nodemailer (SMTP via Relay-Dienst) | Benachrichtigungen, RSVP-Links |
 | Hosting | Docker Compose (3 Container) | frontend + backend + db |
 | Auth | Cloudflare Zero Trust | SSO/Tunnel – nicht Teil dieses Projekts |
 
@@ -459,7 +459,7 @@ moving-dinner/
 | # | Frage | Entscheidung | Begründung |
 |---|-------|-------------|------------|
 | 1 | ORM? | **Prisma** | Bereits genutzt, Type-Safety, Migrations |
-| 2 | E-Mail-Provider? | **SMTP (eigener Server)** | Unabhängig, muss noch eingerichtet werden |
+| 2 | E-Mail-Provider? | **SMTP via Relay-Dienst (Resend/Brevo)** | Eigener Mailserver landet im Spam, Relay hat saubere IPs |
 | 3 | Self-Registration? | **Ja** | User können sich selbst registrieren |
 | 4 | Host-Wunsch? | **3 Werte** | will_host / indifferent / cannot_host – indifferent ist Default |
 | 5 | Manuelle Zuweisung? | **Ja, vor Freeze** | Admin kann automatische Zuweisung überschreiben |
@@ -469,7 +469,75 @@ moving-dinner/
 
 ---
 
-## 9. Noch offene Fragen
+"## 9. E-Mail-Setup (Empfang + Versand)
+
+### 9.1 Architektur
+
+```
+Eingehende Mails:
+  info@jasondietrich.de → Cloudflare Email Routing → privates Postfach (Gmail etc.)
+
+Ausgehende Mails (automatisiert):
+  Moving Dinner App → SMTP Relay (Resend/Brevo) → Empfänger
+
+Ausgehende Mails (manuell aus Gmail):
+  Gmail \"Senden als...\" → SMTP Relay (Resend/Brevo) → Empfänger
+```
+
+### 9.2 Warum kein eigener Mailserver?
+
+Private IP-Adressen (Heimanschlüsse) stehen auf den Blacklists der großen Anbieter (Google, Microsoft). Mails von einem selbstgehosteten Mailserver werden als Spam markiert oder gar nicht angenommen. Ein SMTP-Relay-Dienst hat \"saubere\" IPs und stellt die nötigen DNS-Einträge (SPF, DKIM, DMARC) bereit.
+
+### 9.3 Empfang: Cloudflare Email Routing ✅ (bereits erledigt)
+
+- Cloudflare Dashboard → Email → Email Routing aktiviert
+- Regel: `info@jasondietrich.de` → Weiterleitung an privates Postfach
+- Cloudflare setzt MX-Records automatisch
+
+### 9.4 Versand: SMTP-Relay einrichten (noch zu tun)
+
+**Schritt 1: Konto erstellen** bei einem Relay-Dienst:
+
+| Anbieter | Kostenlos | SMTP Host | Bemerkung |
+|----------|-----------|-----------|-----------|
+| Resend (Empfehlung) | 100 Mails/Tag | `smtp.resend.com` | Modern, einfach, guter DKIM-Support |
+| Brevo | 300 Mails/Tag | `smtp-relay.brevo.com` | Größeres kostenloses Kontingent |
+
+**Schritt 2: Domain verifizieren** beim Relay-Dienst:
+- Der Anbieter gibt dir DNS-Einträge (SPF, DKIM, DMARC)
+- Diese bei Cloudflare im DNS eintragen
+- Warten bis Verifizierung abgeschlossen ist (meist wenige Minuten)
+
+**Schritt 3: SMTP-Daten in das Projekt eintragen:**
+
+Entweder in `docker-compose.yml` oder (besser) in einer `.env`-Datei im Projektroot:
+
+```env
+SMTP_HOST=smtp.resend.com        # oder smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=resend                 # bei Resend: \"resend\", bei Brevo: Login-Mail
+SMTP_PASS=re_xxxxxxxxxxxx       # API-Key vom Relay-Dienst
+SMTP_FROM=Moving Dinner <info@jasondietrich.de>
+BASE_URL=https://deine-domain.de  # für Links in E-Mails
+```
+
+**Schritt 4 (optional): Gmail \"Senden als\" einrichten:**
+- Gmail → Einstellungen → Konto und Import → \"Senden als\"
+- `info@jasondietrich.de` hinzufügen
+- Gleiche SMTP-Daten wie oben eintragen
+- Bestätigungsmail kommt über Cloudflare Routing an
+
+### 9.5 Was im Code bereits vorbereitet ist
+
+- `backend/src/services/email.ts` – Nodemailer mit konfigurierbarem SMTP
+- `backend/src/config.ts` – Liest SMTP_* aus Umgebungsvariablen
+- `docker-compose.yml` – SMTP_* Variablen mit Defaults
+- **Keine Code-Änderungen nötig!** Nur Umgebungsvariablen ausfüllen.
+
+---
+
+## 10. Noch offene Fragen"
 
 1. **Frontend-UI für Zuweisung**: Simple Tables oder Drag&Drop für manuelle Zuweisung?
 2. **Gast-Einschränkungen**: Dürfen Gäste auch hosten? (Aktuell: Ja, wenn sie will_host wählen – aber sie haben evtl. keine Adresse)

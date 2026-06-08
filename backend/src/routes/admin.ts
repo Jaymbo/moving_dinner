@@ -5,10 +5,33 @@ import { requireMeetingGroupAdmin, requireAnyGroupAdmin } from '../middleware/gr
 import { assignHosts } from '../services/assignment';
 import { recalculateScores } from '../services/scoring';
 import { recalculateMatrix } from '../services/matrix';
-import { sendAssignmentEmails, sendDeadlineReminder } from '../services/email';
+import { sendAssignmentEmails, sendDeadlineReminder, sendMail } from '../services/email';
 import { generateRsvpTokens } from '../services/rsvp';
 
 const router = Router();
+
+// POST /api/admin/test-email – Send a test email (requires auth)
+router.post('/test-email', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { to } = req.body;
+    if (!to) { res.status(400).json({ error: 'to is required (email address)' }); return; }
+
+    const success = await sendMail({
+      to,
+      subject: 'Moving Dinner – Test-E-Mail',
+      body: `Hallo!\n\nDas ist eine Test-E-Mail von deiner Moving Dinner App.\n\nWenn du diese Nachricht erhältst, funktioniert der SMTP-Versand korrekt! 🎉\n\nGesendet an: ${to}\nZeitstempel: ${new Date().toLocaleString('de-DE')}\n\nViele Grüße,\nMoving Dinner`,
+    });
+
+    if (success) {
+      res.json({ success: true, message: `Test email sent to ${to}` });
+    } else {
+      res.status(500).json({ error: 'Failed to send test email – check server logs' });
+    }
+  } catch (err) {
+    console.error('Test email error:', err);
+    res.status(500).json({ error: 'Failed to send test email' });
+  }
+});
 
 // POST /api/admin/meetings/:id/freeze – Freeze a meeting and send emails
 router.post('/meetings/:id/freeze', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {

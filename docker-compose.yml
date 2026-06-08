@@ -27,13 +27,13 @@ services:
       DATABASE_URL: postgresql://movingdinner:movingdinner@db:5432/movingdinner?schema=public
       PORT: '3001'
       JWT_SECRET: change-me-in-production
-      SMTP_HOST: smtp.example.com
-      SMTP_PORT: '587'
-      SMTP_SECURE: 'false'
-      SMTP_USER: ''
-      SMTP_PASS: ''
-      SMTP_FROM: 'Moving Dinner <noreply@example.com>'
-      BASE_URL: http://localhost:3003
+      SMTP_HOST: ${SMTP_HOST:-smtp.resend.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-resend}
+      SMTP_PASS: ${SMTP_PASS:-changeme}
+      SMTP_FROM: ${SMTP_FROM:-Moving Dinner <info@jasondietrich.de>}
+      BASE_URL: ${BASE_URL:-http://localhost:3003}
     depends_on:
       db:
         condition: service_healthy
