@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { users } from '../api/client';
+import { users, auth } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
@@ -19,6 +19,14 @@ export default function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -69,6 +77,34 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordMessage('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('Neues Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Passwörter stimmen nicht überein');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await auth.changePassword(currentPassword, newPassword);
+      setPasswordMessage('Passwort erfolgreich geändert!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      setPasswordError(err.message || 'Fehler beim Ändern des Passworts');
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -107,6 +143,50 @@ export default function ProfilePage() {
           </div>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Speichern...' : 'Speichern'}
+          </button>
+        </form>
+      </div>
+
+      {/* Change Password Section */}
+      <div className="card" style={{ maxWidth: 600, marginTop: '2rem' }}>
+        <h2 style={{ marginBottom: '0.5rem' }}>Passwort ändern</h2>
+        {passwordError && <div className="error-box">{passwordError}</div>}
+        {passwordMessage && <div className="success-box">{passwordMessage}</div>}
+        <form onSubmit={handleChangePassword}>
+          <div className="form-group">
+            <label>Aktuelles Passwort</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              required
+              placeholder="Aktuelles Passwort"
+            />
+          </div>
+          <div className="form-group">
+            <label>Neues Passwort</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              required
+              minLength={6}
+              placeholder="Mindestens 6 Zeichen"
+            />
+          </div>
+          <div className="form-group">
+            <label>Neues Passwort bestätigen</label>
+            <input
+              type="password"
+              value={confirmNewPassword}
+              onChange={e => setConfirmNewPassword(e.target.value)}
+              required
+              minLength={6}
+              placeholder="Passwort wiederholen"
+            />
+          </div>
+          <button type="submit" className="btn-primary" disabled={changingPassword}>
+            {changingPassword ? 'Wird geändert...' : 'Passwort ändern'}
           </button>
         </form>
       </div>

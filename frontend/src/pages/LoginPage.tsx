@@ -44,6 +44,9 @@ export default function LoginPage() {
           </button>
         </form>
         <p style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
+          <Link to="/forgot-password">Passwort vergessen?</Link>
+        </p>
+        <p style={{ marginTop: 8, textAlign: 'center', fontSize: 14 }}>
           Noch kein Account? <Link to="/register">Registrieren</Link>
         </p>
       </div>

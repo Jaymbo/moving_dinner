@@ -51,6 +51,18 @@ export const auth = {
       method: 'POST', body: JSON.stringify({ name, email, password }),
     }),
   me: () => request<{ id: number; name: string; email: string; isGuest: boolean; isSuperAdmin: boolean }>('/auth/me'),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST', body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, password: string) =>
+    request<{ message: string; token: string }>('/auth/reset-password', {
+      method: 'POST', body: JSON.stringify({ token, password }),
+    }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST', body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 // Users

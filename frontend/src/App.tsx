@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import MyMeetingsPage from './pages/MyMeetingsPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminMeetingsPage from './pages/AdminMeetingsPage';
@@ -83,6 +85,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
           <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/rsvp/:token" element={<RsvpPage />} />
           <Route path="/join/:code" element={<JoinGroupPage />} />
           <Route path="/public/register/:meetingId" element={<PublicRegisterPage />} />

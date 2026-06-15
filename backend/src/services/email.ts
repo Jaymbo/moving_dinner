@@ -159,6 +159,28 @@ Moving Dinner`;
 /**
  * Send assignment notifications after freeze.
  */
+export async function sendPasswordResetEmail(email: string, name: string, resetUrl: string): Promise<boolean> {
+  const body = `Hallo ${name},
+
+Du hast einen Link zum Zurücksetzen deines Passworts angefordert.
+Klicke auf den folgenden Link, um ein neues Passwort zu setzen:
+
+${resetUrl}
+
+Dieser Link ist 1 Stunde gültig.
+
+Falls du kein Passwort-Reset angefordert hast, kannst du diese E-Mail ignorieren.
+
+Viele Grüße,
+Moving Dinner`;
+
+  return sendMail({
+    to: email,
+    subject: 'Moving Dinner - Passwort zurücksetzen',
+    body,
+  });
+}
+
 export async function sendAssignmentEmails(meetingId: number): Promise<void> {
   const prisma = (await import('../db')).default;
 

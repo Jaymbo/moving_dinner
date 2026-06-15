@@ -28,4 +28,24 @@ export async function cleanupRsvpTokens(): Promise<void> {
   });
 
   console.log(`[TokenCleanup] Deleted ${expired.count} expired tokens, ${oldUsed.count} old used tokens`);
+
+  // Clean up password reset tokens
+  const expiredPw = await prisma.passwordResetToken.deleteMany({
+    where: {
+      expiresAt: {
+        lte: now,
+      },
+    },
+  });
+
+  const oldUsedPw = await prisma.passwordResetToken.deleteMany({
+    where: {
+      used: true,
+      createdAt: {
+        lte: thirtyDaysAgo,
+      },
+    },
+  });
+
+  console.log(`[TokenCleanup] Deleted ${expiredPw.count} expired password reset tokens, ${oldUsedPw.count} old used password reset tokens`);
 }
