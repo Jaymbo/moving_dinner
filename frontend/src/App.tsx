@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -17,6 +17,7 @@ import RsvpPage from './pages/RsvpPage';
 import JoinGroupPage from './pages/JoinGroupPage';
 import PublicRegisterPage from './pages/PublicRegisterPage';
 import FeatureRequestChatWidget from './components/FeatureRequestChatWidget';
+import AdminLayout from './components/AdminLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -43,6 +44,7 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { user, loading, logout, isAdminAnywhere, isSuperAdmin } = useAuth();
+  const location = useLocation();
 
   if (loading) return <div className="loading">Laden...</div>;
 
@@ -60,13 +62,8 @@ export default function App() {
                 Gruppen
               </NavLink>
               {(isAdminAnywhere || isSuperAdmin) && (
-                <NavLink to="/admin/meetings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <NavLink to="/admin/meetings" className={({ isActive }) => isActive || location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'}>
                   Admin
-                </NavLink>
-              )}
-              {isSuperAdmin && (
-                <NavLink to="/admin/feature-requests" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                  📬 Requests
                 </NavLink>
               )}
             </div>
@@ -93,11 +90,14 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><MyMeetingsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><AdminGroupsPage /></ProtectedRoute>} />
-          <Route path="/admin/meetings" element={<AdminRoute><AdminMeetingsPage /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-          <Route path="/admin/scores" element={<AdminRoute><AdminScoresPage /></AdminRoute>} />
-          <Route path="/admin/assignment/:meetingId" element={<AdminRoute><AdminAssignmentPage /></AdminRoute>} />
-          <Route path="/admin/feature-requests" element={<SuperAdminRoute><AdminFeatureRequestsPage /></SuperAdminRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+            <Route index element={<Navigate to="/admin/meetings" replace />} />
+            <Route path="meetings" element={<AdminMeetingsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="scores" element={<AdminScoresPage />} />
+            <Route path="assignment/:meetingId" element={<AdminAssignmentPage />} />
+            <Route path="feature-requests" element={<SuperAdminRoute><AdminFeatureRequestsPage /></SuperAdminRoute>} />
+          </Route>
         </Routes>
       </main>
       {user && <FeatureRequestChatWidget />}

@@ -3,13 +3,15 @@ import { users } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminUsersPage() {
-  const { isSuperAdmin, refreshUser } = useAuth();
+  const { user, isSuperAdmin, refreshUser } = useAuth();
   const [userList, setUserList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [togglingSuperAdmin, setTogglingSuperAdmin] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -45,13 +47,19 @@ export default function AdminUsersPage() {
   }
 
   async function handleToggleSuperAdmin(id: number, currentValue: boolean) {
-    if (!confirm(currentValue ? 'Super-Admin Status entfernen?' : 'Zum Super-Admin machen?')) return;
+    const targetUser = userList.find((u: any) => u.id === id);
+    const action = currentValue ? 'Super-Admin Status entfernen' : 'Zum Super-Admin ernennen';
+    const userName = targetUser?.name || 'diesen Benutzer';
+    if (!confirm(`${action}: ${userName}?\n\n${!currentValue ? 'Dieser Benutzer erhält volle Admin-Rechte inkl. Zugriff auf alle Admin-Funktionen und kann andere Super-Admins verwalten.' : 'Dieser Benutzer verliert alle Super-Admin-Rechte.'}`)) return;
+    
     setTogglingSuperAdmin(id);
+    setError('');
+    setSuccess('');
     try {
       await users.toggleSuperAdmin(id, !currentValue);
       await loadUsers();
-      // Refresh own user data in case we changed our own status
       await refreshUser();
+      setSuccess(`${userName} wurde ${!currentValue ? 'zum Super-Admin ernannt' : 'als Super-Admin entfernt'}.`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -70,12 +78,39 @@ export default function AdminUsersPage() {
     return <span className="badge badge-green">User</span>;
   }
 
+  const filteredUsers = userList.filter((u: any) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.address?.toLowerCase().includes(q) ||
+      u.diet?.toLowerCase().includes(q)
+    );
+  });
+
   if (loading) return <div className="loading">Laden...</div>;
 
   return (
     <div>
       <h1 className="page-title">Benutzer verwalten</h1>
       {error && <div className="error-box">{error}</div>}
+      {success && <div className="success-box">{success}</div>}
+
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Suche nach Name, E-Mail, Adresse, Diät..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, maxWidth: 400 }}
+        />
+        {search && (
+          <span className="text-sm text-muted">
+            {filteredUsers.length} von {userList.length} Benutzern
+          </span>
+        )}
+      </div>
 
       <table>
         <thead>
@@ -92,8 +127,8 @@ export default function AdminUsersPage() {
           </tr>
         </thead>
         <tbody>
-          {userList.map((u: any) => (
-            <tr key={u.id}>
+          {filteredUsers.map((u: any) => (
+            <tr key={u.id} style={u.isSuperAdmin ? { background: '#f5f3ff' } : undefined}>
               {editingId === u.id ? (
                 <>
                   <td>{u.id}</td>
@@ -114,7 +149,7 @@ export default function AdminUsersPage() {
               ) : (
                 <>
                   <td>{u.id}</td>
-                  <td>{u.name}</td>
+                  <td>{u.name} {u.id === user?.id && <span style={{ color: '#7c3aed', fontSize: '0.8rem' }}>(du)</span>}</td>
                   <td className="text-sm">{u.email}</td>
                   <td className="text-sm">{u.address || '–'}</td>
                   <td>{u.maxGuests}</td>
@@ -124,8 +159,10 @@ export default function AdminUsersPage() {
                   <td>
                     <div className="flex gap-2">
                       <button className="btn-sm" onClick={() => startEdit(u)}>✏️</button>
-                      <button className="btn-sm btn-danger" onClick={() => handleDelete(u.id)}>🗑️</button>
-                      {isSuperAdmin && (
+                      {u.id !== user?.id && (
+                        <button className="btn-sm btn-danger" onClick={() => handleDelete(u.id)}>🗑️</button>
+                      )}
+                      {isSuperAdmin && u.id !== user?.id && (
                         <button
                           className="btn-sm"
                           style={{
@@ -146,6 +183,13 @@ export default function AdminUsersPage() {
               )}
             </tr>
           ))}
+          {filteredUsers.length === 0 && search && (
+            <tr>
+              <td colSpan={9} style={{ textAlign: 'center', padding: '1.5rem', color: '#999' }}>
+                Keine Benutzer gefunden für „{search}"
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
