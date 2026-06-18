@@ -18,6 +18,12 @@ router.post('/register', async (req, res: Response) => {
       return;
     }
 
+    const parsedMaxGuests = typeof maxGuests === 'number' ? maxGuests : parseInt(maxGuests, 10);
+    if (maxGuests !== undefined && (Number.isNaN(parsedMaxGuests) || parsedMaxGuests < 0)) {
+      res.status(400).json({ error: 'maxGuests must be a non-negative number' });
+      return;
+    }
+
     // Check if email already taken
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {

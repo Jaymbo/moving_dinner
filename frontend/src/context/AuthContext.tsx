@@ -15,7 +15,7 @@ interface AuthContextType {
   isAdminAnywhere: boolean;
   isSuperAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, address?: string, maxGuests?: number) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -83,8 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const res = await auth.register(name, email, password);
+  const register = async (name: string, email: string, password: string, address?: string, maxGuests?: number) => {
+    const res = await auth.register(name, email, password, address, maxGuests);
     setToken(res.token);
     // Use isSuperAdmin from register response (first user gets super-admin)
     const initialSuperAdmin = !!(res as any).isSuperAdmin;

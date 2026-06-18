@@ -8,6 +8,8 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [address, setAddress] = useState('');
+  const [maxGuests, setMaxGuests] = useState<number>(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +22,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, address, maxGuests);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registrierung fehlgeschlagen');
@@ -47,6 +49,14 @@ export default function RegisterPage() {
           <div className="form-group">
             <label>Passwort</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+          </div>
+          <div className="form-group">
+            <label>Wohnort / Adresse</label>
+            <input type="text" value={address} onChange={e => setAddress(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label>Max. Gäste, die du aufnehmen kannst</label>
+            <input type="number" min={0} value={maxGuests} onChange={e => setMaxGuests(parseInt(e.target.value, 10) || 0)} required />
           </div>
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? 'Registrieren...' : 'Registrieren'}

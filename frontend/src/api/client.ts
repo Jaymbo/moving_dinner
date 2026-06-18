@@ -46,9 +46,9 @@ export const auth = {
     request<{ id: number; name: string; email: string; isSuperAdmin: boolean; token: string }>('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password }),
     }),
-  register: (name: string, email: string, password: string) =>
+  register: (name: string, email: string, password: string, address?: string, maxGuests?: number) =>
     request<{ id: number; name: string; email: string; isSuperAdmin: boolean; token: string }>('/auth/register', {
-      method: 'POST', body: JSON.stringify({ name, email, password }),
+      method: 'POST', body: JSON.stringify({ name, email, password, address, maxGuests }),
     }),
   me: () => request<{ id: number; name: string; email: string; isGuest: boolean; isSuperAdmin: boolean }>('/auth/me'),
   forgotPassword: (email: string) =>
