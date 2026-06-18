@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { meetings, responses } from '../api/client';
+import { meetings, responses, groups } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function MyMeetingsPage() {
+  const { user } = useAuth();
   const [myMeetings, setMyMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Creation state
+  const [showCreate, setShowCreate] = useState(false);
+  const [creatableGroups, setCreatableGroups] = useState<any[]>([]);
+  const [newGroupId, setNewGroupId] = useState<number | null>(null);
+  const [newDate, setNewDate] = useState('');
+  const [newDeadline, setNewDeadline] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => { loadMeetings(); }, []);
+  useEffect(() => { 
+    loadMeetings(); 
+    loadCreatableGroups();
+  }, []);
 
   async function loadMeetings() {
     try {
@@ -17,6 +30,38 @@ export default function MyMeetingsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadCreatableGroups() {
+    try {
+      const g = await groups.list();
+      const creatable = g.filter((group: any) => {
+        const role = group.role || (group.members?.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id)?.role);
+        return group.meetingCreation === 'all' || role === 'admin';
+      });
+      setCreatableGroups(creatable);
+      if (creatable.length > 0) setNewGroupId(creatable[0].id);
+    } catch (err: any) {
+      console.error('Error loading creatable groups:', err);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newGroupId || !newDate || !newDeadline) return;
+    setCreating(true);
+    setError('');
+    try {
+      await meetings.create(newGroupId, { date: newDate, deadline: newDeadline });
+      setShowCreate(false);
+      setNewDate('');
+      setNewDeadline('');
+      await loadMeetings();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -55,8 +100,51 @@ export default function MyMeetingsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Meine Treffen</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="page-title" style={{ marginBottom: 0 }}>Meine Treffen</h1>
+        <button 
+          className="btn-primary" 
+          onClick={() => setShowCreate(!showCreate)} 
+          disabled={creatableGroups.length === 0}
+        >
+          {showCreate ? '✕ Abbrechen' : '+ Neues Treffen'}
+        </button>
+      </div>
+
       {error && <div className="error-box">{error}</div>}
+
+      {showCreate && (
+        <div className="card mb-4">
+          <h3>Neues Treffen erstellen</h3>
+          <form onSubmit={handleCreate} className="mt-4">
+            <div className="form-group">
+              <label>Gruppe</label>
+              <select 
+                value={newGroupId || ''} 
+                onChange={e => setNewGroupId(parseInt(e.target.value))}
+                required
+              >
+                {creatableGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}{g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Datum</label>
+              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label>Anmeldeschluss</label>
+              <input type="datetime-local" value={newDeadline} onChange={e => setNewDeadline(e.target.value)} required />
+            </div>
+            <button type="submit" className="btn-primary" disabled={creating}>
+              {creating ? 'Erstellen...' : 'Treffen erstellen'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {myMeetings.length === 0 ? (
         <div className="empty-state">

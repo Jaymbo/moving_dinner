@@ -29,12 +29,6 @@ async function main() {
     },
   });
 
-  await prisma.score.upsert({
-    where: { userId: admin.id },
-    update: {},
-    create: { userId: admin.id },
-  });
-
   const users = [
     { name: 'Anna Müller', email: 'anna@example.com', address: 'Berliner Str. 5, 12345 Berlin', maxGuests: 3, diet: 'vegetarisch' },
     { name: 'Ben Schmidt', email: 'ben@example.com', address: 'Hamburger Weg 12, 12345 Berlin', maxGuests: 2, diet: null },
@@ -50,7 +44,6 @@ async function main() {
     const user = await prisma.user.create({
       data: { name: u.name, email: u.email, passwordHash, address: u.address, maxGuests: u.maxGuests, diet: u.diet, isGuest: false },
     });
-    await prisma.score.create({ data: { userId: user.id } });
     createdUsers.push(user);
   }
 
@@ -152,9 +145,9 @@ async function main() {
     const raw = s.participations - s.hostings - s.hostedGuests;
     const score = maxG > 0 ? raw / maxG : raw;
     await prisma.score.upsert({
-      where: { userId: user.id },
+      where: { userId_groupId: { userId: user.id, groupId: group.id } },
       update: { participations: s.participations, hostings: s.hostings, hostedGuests: s.hostedGuests, score },
-      create: { userId: user.id, participations: s.participations, hostings: s.hostings, hostedGuests: s.hostedGuests, score },
+      create: { userId: user.id, groupId: group.id, participations: s.participations, hostings: s.hostings, hostedGuests: s.hostedGuests, score },
     });
   }
 
@@ -182,7 +175,7 @@ async function main() {
   await prisma.meetupMatrix.deleteMany({});
   const entries = Array.from(pairCounts.entries()).map(([key, count]) => {
     const [userAId, userBId] = key.split('_').map(Number);
-    return { userAId, userBId, count };
+    return { userAId, userBId, groupId: group.id, count };
   });
   if (entries.length > 0) {
     await prisma.meetupMatrix.createMany({ data: entries });

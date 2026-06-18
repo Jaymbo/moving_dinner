@@ -6,14 +6,13 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// GET /api/users - All users (any group admin)
-router.get('/', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res: Response) => {
+// GET /api/users - All users (Super-Admin only)
+router.get('/', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
         id: true, name: true, email: true, address: true,
         maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
-        scores: true,
       },
       orderBy: { id: 'asc' },
     });
@@ -35,7 +34,6 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       select: {
         id: true, name: true, email: true, address: true,
         maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
-        scores: true,
         groupMembers: { include: { group: true } },
       },
     });
@@ -177,12 +175,8 @@ router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response)
       },
     });
 
-    // Create score entry
-    await prisma.score.upsert({
-      where: { userId: id },
-      update: {},
-      create: { userId: id },
-    });
+    // Score entries are created per group when the user joins a group or when scores are recalculated.
+    // No global score entry is created here anymore.
 
     const { generateToken } = await import('../middleware/auth');
     const token = generateToken(id);

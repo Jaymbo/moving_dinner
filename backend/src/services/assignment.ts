@@ -56,14 +56,16 @@ export async function assignHosts(meetingId: number): Promise<void> {
 
   if (meeting.responses.length === 0) return;
 
-  // Load scores for all participants
+  // Load scores for all participants in this group
+  const groupId = meeting.groupId;
   const userIds = meeting.responses.map(r => r.userId);
-  const scores = await prisma.score.findMany({ where: { userId: { in: userIds } } });
+  const scores = await prisma.score.findMany({ where: { userId: { in: userIds }, groupId } });
   const scoreMap = new Map(scores.map(s => [s.userId, Number(s.score)]));
 
-  // Load meetup matrix for all participants
+  // Load meetup matrix for all participants in this group
   const matrixEntries = await prisma.meetupMatrix.findMany({
     where: {
+      groupId,
       OR: [
         { userAId: { in: userIds } },
         { userBId: { in: userIds } },

@@ -7,9 +7,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import MyMeetingsPage from './pages/MyMeetingsPage';
 import ProfilePage from './pages/ProfilePage';
-import AdminMeetingsPage from './pages/AdminMeetingsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
-import AdminScoresPage from './pages/AdminScoresPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
 import AdminAssignmentPage from './pages/AdminAssignmentPage';
 import AdminFeatureRequestsPage from './pages/AdminFeatureRequestsPage';
@@ -26,14 +24,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, isAdminAnywhere, isSuperAdmin } = useAuth();
-  if (loading) return <div className="loading">Laden...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!isAdminAnywhere && !isSuperAdmin) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
-
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isSuperAdmin } = useAuth();
   if (loading) return <div className="loading">Laden...</div>;
@@ -43,7 +33,7 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { user, loading, logout, isAdminAnywhere, isSuperAdmin } = useAuth();
+  const { user, loading, logout, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) return <div className="loading">Laden...</div>;
@@ -61,8 +51,8 @@ export default function App() {
               <NavLink to="/groups" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 Gruppen
               </NavLink>
-              {(isAdminAnywhere || isSuperAdmin) && (
-                <NavLink to="/admin/meetings" className={({ isActive }) => isActive || location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'}>
+              {isSuperAdmin && (
+                <NavLink to="/admin/users" className={({ isActive }) => isActive || location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'}>
                   Admin
                 </NavLink>
               )}
@@ -90,13 +80,11 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><MyMeetingsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><AdminGroupsPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-            <Route index element={<Navigate to="/admin/meetings" replace />} />
-            <Route path="meetings" element={<AdminMeetingsPage />} />
+          <Route path="/groups/:groupId/assignment/:meetingId" element={<ProtectedRoute><AdminAssignmentPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<AdminUsersPage />} />
-            <Route path="scores" element={<AdminScoresPage />} />
-            <Route path="assignment/:meetingId" element={<AdminAssignmentPage />} />
-            <Route path="feature-requests" element={<SuperAdminRoute><AdminFeatureRequestsPage /></SuperAdminRoute>} />
+            <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />
           </Route>
         </Routes>
       </main>

@@ -3,8 +3,6 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout() {
-  const { isSuperAdmin } = useAuth();
-
   return (
     <div>
       <div className="admin-tabs" style={{
@@ -13,12 +11,8 @@ export default function AdminLayout() {
         borderBottom: '2px solid #e5e7eb',
         marginBottom: '1.5rem',
       }}>
-        <AdminTab to="/admin/meetings">📅 Treffen</AdminTab>
         <AdminTab to="/admin/users">👥 Benutzer</AdminTab>
-        <AdminTab to="/admin/scores">🏆 Scores</AdminTab>
-        {isSuperAdmin && (
-          <AdminTab to="/admin/feature-requests">📬 Requests</AdminTab>
-        )}
+        <AdminTab to="/admin/feature-requests">📬 Requests</AdminTab>
       </div>
       <Outlet />
     </div>

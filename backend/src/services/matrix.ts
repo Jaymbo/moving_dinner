@@ -1,16 +1,15 @@
 import prisma from '../db';
 
 /**
- * Recalculate the meetup matrix from frozen meetings.
- * Port of createMeetupMatrix() from meetups.gs
+ * Recalculate the meetup matrix for a specific group from frozen meetings.
  *
- * For each frozen meeting, groups participants by their assigned host.
+ * For each frozen meeting in the group, groups participants by their assigned host.
  * For each pair (A, B) in the same host group, increment the count.
  */
-export async function recalculateMatrix(): Promise<void> {
-  // Get all frozen meetings with responses including user info
+export async function recalculateMatrixForGroup(groupId: number): Promise<void> {
+  // Get all frozen meetings for this group with responses
   const frozenMeetings = await prisma.meeting.findMany({
-    where: { frozen: true },
+    where: { frozen: true, groupId },
     include: { responses: true },
   });
 
@@ -43,17 +42,35 @@ export async function recalculateMatrix(): Promise<void> {
     }
   }
 
-  // Clear existing matrix and rewrite
-  await prisma.meetupMatrix.deleteMany({});
+  // Clear existing matrix for this group and rewrite
+  await prisma.meetupMatrix.deleteMany({ where: { groupId } });
 
   // Insert new entries
   const entries = Array.from(pairCounts.entries()).map(([key, count]) => {
     const [userAId, userBId] = key.split('_').map(Number);
-    return { userAId, userBId, count };
+    return { userAId, userBId, groupId, count };
   });
 
-  // Batch insert (Prisma doesn't have native batch insert, use createMany)
+  // Batch insert
   if (entries.length > 0) {
     await prisma.meetupMatrix.createMany({ data: entries });
   }
+}
+
+/**
+ * Recalculate the meetup matrix for all groups.
+ */
+export async function recalculateAllMatrix(): Promise<void> {
+  const groups = await prisma.group.findMany({ select: { id: true } });
+  for (const group of groups) {
+    await recalculateMatrixForGroup(group.id);
+  }
+}
+
+/**
+ * Legacy function: recalculate matrix across all groups.
+ * @deprecated Use recalculateAllMatrix() or recalculateMatrixForGroup() instead.
+ */
+export async function recalculateMatrix(): Promise<void> {
+  return recalculateAllMatrix();
 }

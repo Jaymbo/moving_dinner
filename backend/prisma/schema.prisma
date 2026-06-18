@@ -23,7 +23,7 @@ model User {
   groupMembers    GroupMember[]
   rsvpTokens      RsvpToken[]
   responses       Response[]
-  scores          Score?
+  scores          Score[]
   meetupMatrixA   MeetupMatrix[] @relation("UserA")
   meetupMatrixB   MeetupMatrix[] @relation("UserB")
   createdMeetings Meeting[]      @relation("MeetingCreator")
@@ -44,10 +44,13 @@ model Group {
   createdBy       Int?      @map("created_by")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  creator     User?          @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-  members     GroupMember[]
-  meetings    Meeting[]
-  invitations GroupInvitation[]
+  creator          User?             @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  members          GroupMember[]
+  meetings         Meeting[]
+  invitations      GroupInvitation[]
+  scores           Score[]
+  meetupMatrix     MeetupMatrix[]
+  featureRequests  FeatureRequest[]
 
   @@map("groups")
 }
@@ -130,34 +133,40 @@ model Response {
 }
 
 model Score {
-  id             Int    @id @default(autoincrement())
-  userId         Int    @unique @map("user_id")
-  participations Int    @default(0)
-  hostings       Int    @default(0)
-  hostedGuests   Int    @default(0) @map("hosted_guests")
-  score          Decimal @default(0) @db.Decimal
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  groupId        Int      @map("group_id")
+  participations Int      @default(0)
+  hostings       Int      @default(0)
+  hostedGuests   Int      @default(0) @map("hosted_guests")
+  score          Decimal  @default(0) @db.Decimal
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, groupId])
   @@map("scores")
 }
 
 model MeetupMatrix {
-  userAId Int @map("user_a_id")
-  userBId Int @map("user_b_id")
-  count   Int @default(0)
+  id      Int  @id @default(autoincrement())
+  userAId Int  @map("user_a_id")
+  userBId Int  @map("user_b_id")
+  groupId Int  @map("group_id")
+  count   Int  @default(0)
 
-  userA User @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB User @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+  userA User  @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User  @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@id([userAId, userBId])
-  // CHECK constraint added via migration: user_a_id < user_b_id
+  @@unique([userAId, userBId, groupId])
   @@map("meetup_matrix")
 }
 
 model FeatureRequest {
   id          Int      @id @default(autoincrement())
   userId      Int?     @map("user_id")
+  groupId     Int?     @map("group_id")
   type        String   @db.VarChar(20)
   title       String   @db.VarChar(200)
   description String   @db.Text
@@ -166,7 +175,8 @@ model FeatureRequest {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@map("feature_requests")
 }

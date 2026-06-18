@@ -1,8 +1,8 @@
 import prisma from '../db';
 import { assignHosts } from '../services/assignment';
 import { sendAssignmentEmails } from '../services/email';
-import { recalculateScores } from '../services/scoring';
-import { recalculateMatrix } from '../services/matrix';
+import { recalculateAllScores } from '../services/scoring';
+import { recalculateAllMatrix } from '../services/matrix';
 
 /**
  * P5 – Deadline-Verarbeitung (alle 30 Min)
@@ -52,17 +52,17 @@ export async function processDeadlines(): Promise<void> {
     }
   }
 
-  // If any meetings were frozen, recalculate scores and matrix
+  // If any meetings were frozen, recalculate scores and matrix for all groups
   if (somethingChanged) {
     try {
-      await recalculateScores();
+      await recalculateAllScores();
       console.log('[DeadlineProcessor] Recalculated scores');
     } catch (err) {
       console.error('[DeadlineProcessor] Failed to recalculate scores:', err);
     }
 
     try {
-      await recalculateMatrix();
+      await recalculateAllMatrix();
       console.log('[DeadlineProcessor] Recalculated meetup matrix');
     } catch (err) {
       console.error('[DeadlineProcessor] Failed to recalculate matrix:', err);

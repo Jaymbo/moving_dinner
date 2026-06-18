@@ -74,10 +74,7 @@ router.post('/meetings/:id/register', async (req, res: Response) => {
         },
       });
 
-      // Create initial score entry
-      await prisma.score.create({ data: { userId: user.id } });
-
-      // Add to group if meeting belongs to one
+      // Add guest to the meeting's group
       const existingMembership = await prisma.groupMember.findUnique({
         where: { groupId_userId: { groupId: meeting.groupId, userId: user.id } },
       });

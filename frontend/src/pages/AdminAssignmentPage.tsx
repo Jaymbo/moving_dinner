@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { meetings, assignment, responses } from '../api/client';
+import { meetings, assignment } from '../api/client';
 
 export default function AdminAssignmentPage() {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -113,7 +113,8 @@ export default function AdminAssignmentPage() {
   return (
     <div>
       <div className="flex items-center gap-4 mb-4">
-        <button className="btn-sm" onClick={() => navigate('/admin/meetings')}>← Zurück</button>
+
+        <button className="btn-sm" onClick={() => navigate('/groups')}>← Zurück</button>
         <h1 className="page-title" style={{ marginBottom: 0 }}>Zuweisung – {formatDate(meeting.date)}</h1>
         {meeting.frozen && <span className="badge badge-gray">Abgeschlossen</span>}
         {!meeting.frozen && <span className="badge badge-green">Offen</span>}

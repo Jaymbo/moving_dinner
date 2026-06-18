@@ -3,3 +3,6 @@ frontend/node_modules/*
 data/*
 old_version/*
 .env
+backend/dist/*
+.continue/*
+frontend/dist/*

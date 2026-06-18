@@ -47,9 +47,6 @@ router.post('/register', async (req, res: Response) => {
       },
     });
 
-    // Create initial score entry
-    await prisma.score.create({ data: { userId: user.id } });
-
     const token = generateToken(user.id);
     res.status(201).json({ ...user, token });
   } catch (err) {

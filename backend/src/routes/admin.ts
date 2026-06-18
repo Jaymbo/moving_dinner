@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
 import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireMeetingGroupAdmin, requireAnyGroupAdmin } from '../middleware/groupAuth';
+import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { requireMeetingGroupAdmin } from '../middleware/groupAuth';
 import { assignHosts } from '../services/assignment';
-import { recalculateScores } from '../services/scoring';
-import { recalculateMatrix } from '../services/matrix';
+import { recalculateScoresForGroup, recalculateAllScores } from '../services/scoring';
+import { recalculateMatrixForGroup, recalculateAllMatrix } from '../services/matrix';
 import { sendAssignmentEmails, sendDeadlineReminder, sendMail } from '../services/email';
 import { generateRsvpTokens } from '../services/rsvp';
 
@@ -62,8 +62,8 @@ router.post('/meetings/:id/freeze', requireAuth, requireMeetingGroupAdmin, async
     });
 
     // Recalculate scores and matrix
-    await recalculateScores();
-    await recalculateMatrix();
+    await recalculateAllScores();
+    await recalculateAllMatrix();
 
     res.json({ success: true });
   } catch (err) {
@@ -91,11 +91,11 @@ router.post('/meetings/:id/remind', requireAuth, requireMeetingGroupAdmin, async
   }
 });
 
-// POST /api/admin/recalculate-scores – Recalculate all scores and matrix (any group admin)
-router.post('/recalculate-scores', requireAuth, requireAnyGroupAdmin, async (_req: AuthRequest, res: Response) => {
+// POST /api/admin/recalculate-scores – Recalculate all scores and matrix (super-admin only)
+router.post('/recalculate-scores', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
   try {
-    await recalculateScores();
-    await recalculateMatrix();
+    await recalculateAllScores();
+    await recalculateAllMatrix();
     res.json({ success: true });
   } catch (err) {
     console.error('Recalculate error:', err);

@@ -122,7 +122,6 @@ export default function AdminUsersPage() {
             <th>Max Gäste</th>
             <th>Diät</th>
             <th>Typ</th>
-            <th>Score</th>
             <th>Aktionen</th>
           </tr>
         </thead>
@@ -138,7 +137,6 @@ export default function AdminUsersPage() {
                   <td><input type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} style={{width:60}} /></td>
                   <td><input value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} style={{width:100}} /></td>
                   <td>{getUserTypeBadge(u)}</td>
-                  <td>{u.scores ? Number(u.scores.score).toFixed(2) : '–'}</td>
                   <td>
                     <div className="flex gap-2">
                       <button className="btn-sm btn-primary" onClick={() => handleSave(u.id)}>✓</button>
@@ -155,7 +153,6 @@ export default function AdminUsersPage() {
                   <td>{u.maxGuests}</td>
                   <td className="text-sm">{u.diet || '–'}</td>
                   <td>{getUserTypeBadge(u)}</td>
-                  <td>{u.scores ? Number(u.scores.score).toFixed(2) : '–'}</td>
                   <td>
                     <div className="flex gap-2">
                       <button className="btn-sm" onClick={() => startEdit(u)}>✏️</button>

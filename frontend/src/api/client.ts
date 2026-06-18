@@ -110,6 +110,9 @@ export const groups = {
       method: 'POST', body: JSON.stringify({ maxUses, expiresAt }),
     }),
   listInvitations: (groupId: number) => request<any[]>(`/groups/${groupId}/invitations`),
+  scores: (groupId: number) => request<any[]>(`/groups/${groupId}/scores`),
+  matrix: (groupId: number) => request<any[]>(`/groups/${groupId}/matrix`),
+  recalculate: (groupId: number) => request<{ success: boolean }>(`/groups/${groupId}/recalculate`, { method: 'POST' }),
 };
 
 // Join
