@@ -14,7 +14,8 @@ export default function MyMeetingsPage() {
   const [creatableGroups, setCreatableGroups] = useState<any[]>([]);
   const [newGroupId, setNewGroupId] = useState<number | null>(null);
   const [newDate, setNewDate] = useState('');
-  const [newDeadline, setNewDeadline] = useState('');
+  const [newDeadlineDate, setNewDeadlineDate] = useState('');
+  const [newDeadlineTime, setNewDeadlineTime] = useState('23:59');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => { 
@@ -47,16 +48,21 @@ export default function MyMeetingsPage() {
     }
   }
 
+  function combineDateTime(date: string, time: string): string {
+    return `${date}T${time}`;
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newGroupId || !newDate || !newDeadline) return;
+    if (!newGroupId || !newDate || !newDeadlineDate || !newDeadlineTime) return;
     setCreating(true);
     setError('');
     try {
-      await meetings.create(newGroupId, { date: newDate, deadline: newDeadline });
+      await meetings.create(newGroupId, { date: newDate, deadline: combineDateTime(newDeadlineDate, newDeadlineTime) });
       setShowCreate(false);
       setNewDate('');
-      setNewDeadline('');
+      setNewDeadlineDate('');
+      setNewDeadlineTime('23:59');
       await loadMeetings();
     } catch (err: any) {
       setError(err.message);
@@ -137,7 +143,22 @@ export default function MyMeetingsPage() {
             </div>
             <div className="form-group">
               <label>Anmeldeschluss</label>
-              <input type="datetime-local" value={newDeadline} onChange={e => setNewDeadline(e.target.value)} required />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={newDeadlineDate}
+                  onChange={e => setNewDeadlineDate(e.target.value)}
+                  required
+                  aria-label="Anmeldeschluss Datum"
+                />
+                <input
+                  type="time"
+                  value={newDeadlineTime}
+                  onChange={e => setNewDeadlineTime(e.target.value)}
+                  required
+                  aria-label="Anmeldeschluss Uhrzeit"
+                />
+              </div>
             </div>
             <button type="submit" className="btn-primary" disabled={creating}>
               {creating ? 'Erstellen...' : 'Treffen erstellen'}
