@@ -34,11 +34,17 @@ export async function recalculateScoresForGroup(groupId: number): Promise<void> 
       // If this user is a host (assignedHost points to themselves)
       if (response.assignedHost === response.userId) {
         s.hostings++;
-        // Count guests assigned to this host in this meeting
-        const guestsAtThisHost = meeting.responses.filter(
-          r => r.assignedHost === response.userId && r.userId !== response.userId
-        );
-        s.hostedGuests += guestsAtThisHost.length;
+      }
+
+      // Count every guest ever assigned to this user as host across all frozen meetings.
+      if (
+        response.assignedHost !== null &&
+        response.assignedHost !== response.userId
+      ) {
+        const hostStat = stats.get(response.assignedHost);
+        if (hostStat) {
+          hostStat.hostedGuests++;
+        }
       }
     }
   }

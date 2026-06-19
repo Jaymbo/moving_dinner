@@ -1,7 +1,17 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
+import dotenv from 'dotenv';
 import { parse } from 'csv-parse/sync';
 import prisma from '../src/db';
+
+// Load .env from current directory or project root (when running from backend/)
+const envInCwd = path.join(process.cwd(), '.env');
+const envInParent = path.join(process.cwd(), '..', '.env');
+if (fs.existsSync(envInCwd)) {
+  dotenv.config({ path: envInCwd });
+} else if (fs.existsSync(envInParent)) {
+  dotenv.config({ path: envInParent });
+}
 
 type OldUserRecord = {
   name: string;
