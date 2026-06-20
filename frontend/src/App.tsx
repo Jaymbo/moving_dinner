@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -32,43 +32,97 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
-  const { user, loading, logout, isSuperAdmin } = useAuth();
+function Navbar() {
+  const { user, logout, isSuperAdmin } = useAuth();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  if (!user) return null;
+
+  const navLinks = [
+    { to: '/', label: 'Meine Treffen' },
+    { to: '/groups', label: 'Gruppen' },
+    ...(isSuperAdmin ? [{ to: '/admin/users', label: 'Admin' }] : []),
+    { to: '/profile', label: 'Profil' },
+  ];
+
+  return (
+    <nav className="navbar">
+      <div className="nav-inner container">
+        <div className="nav-top">
+          <NavLink to="/" className="nav-brand" onClick={() => setMenuOpen(false)}>
+            🍽️ Moving Dinner
+          </NavLink>
+          <button
+            className="nav-burger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'}
+            aria-expanded={menuOpen}
+          >
+            <span className={menuOpen ? 'open' : ''} />
+            <span className={menuOpen ? 'open' : ''} />
+            <span className={menuOpen ? 'open' : ''} />
+          </button>
+        </div>
+
+        <div className={`nav-menu ${menuOpen ? 'open' : ''}`}>
+
+          <div className="nav-section nav-section-links">
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/'}
+                className={({ isActive }) =>
+                  isActive || (link.to === '/admin/users' && location.pathname.startsWith('/admin'))
+                    ? 'nav-link active'
+                    : 'nav-link'
+                }
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="nav-section nav-section-user">
+            <NavLink
+
+
+
+
+
+
+
+
+              to="/profile"
+              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={() => setMenuOpen(false)}
+            >
+
+              Profil
+            </NavLink>
+
+
+
+            <span className="nav-user-name text-sm text-muted">Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}</span>
+            <button className="btn-sm nav-logout" onClick={logout}>Abmelden</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export default function App() {
+  const { user, loading } = useAuth();
 
   if (loading) return <div className="loading">Laden...</div>;
 
   return (
     <div className="app-layout">
-      {user && (
-        <nav className="navbar">
-          <div className="nav-inner container flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <NavLink to="/" className="nav-brand">🍽️ Moving Dinner</NavLink>
-              <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                Meine Treffen
-              </NavLink>
-              <NavLink to="/groups" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                Gruppen
-              </NavLink>
-              {isSuperAdmin && (
-                <NavLink to="/admin/users" className={({ isActive }) => isActive || location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'}>
-                  Admin
-                </NavLink>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted">Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}</span>
-              <NavLink to="/profile" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                Profil
-              </NavLink>
-              <button className="btn-sm" onClick={logout}>Abmelden</button>
-            </div>
-          </div>
-        </nav>
-      )}
+      <Navbar />
 
-      <main className="container" style={{ paddingTop: user ? '24px' : '0', paddingBottom: '48px' }}>
+      <main className="container app-main">
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
           <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage />} />

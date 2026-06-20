@@ -80,7 +80,7 @@ export default function GroupCard(props: GroupCardProps) {
         🎯 Treffen erstellen: <strong>{group.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
       </p>
 
-      <div className="flex gap-2">
+      <div className="card-actions">
         {(isMember || isAdmin) && (
           <button className="btn-sm" onClick={() => onToggle(group.id)}>
             {selected ? '✕ Schließen' : '👁️ Details'}

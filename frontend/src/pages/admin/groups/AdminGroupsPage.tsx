@@ -115,13 +115,13 @@ export default function AdminGroupsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <h1 className="page-title" style={{ marginBottom: 0 }}>Gruppen</h1>
-        <div className="flex gap-2">
+        <div className="actions-stack">
           <button className="btn-primary" onClick={() => setShowCreate(!showCreate)}>
             {showCreate ? '✕ Abbrechen' : '+ Neue Gruppe'}
           </button>
-          <button className="" onClick={() => setShowJoin(!showJoin)}>
+          <button className="btn" onClick={() => setShowJoin(!showJoin)}>
             {showJoin ? '✕ Abbrechen' : '🔗 Gruppe beitreten'}
           </button>
         </div>

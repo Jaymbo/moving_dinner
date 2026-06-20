@@ -222,7 +222,7 @@ export default function ProfilePage() {
                 style={{ borderColor: deleteConfirmText && deleteConfirmText !== 'LÖSCHEN' ? '#e74c3c' : undefined }}
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="card-actions">
               <button
                 className="btn-primary"
                 style={{ backgroundColor: '#e74c3c', borderColor: '#e74c3c' }}

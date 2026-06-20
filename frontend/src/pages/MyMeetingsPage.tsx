@@ -143,7 +143,7 @@ export default function MyMeetingsPage() {
             </div>
             <div className="form-group">
               <label>Anmeldeschluss</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="date"
                   value={newDeadlineDate}
@@ -201,7 +201,7 @@ export default function MyMeetingsPage() {
                           '🤷 Egal'
                         }</strong>
                       </p>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button className="btn-sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</button>
                         <button className="btn-sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</button>
                         <button className="btn-sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</button>
@@ -211,7 +211,7 @@ export default function MyMeetingsPage() {
                   ) : (
                     <div>
                       <p className="text-sm mb-2">Du hast dich noch nicht angemeldet:</p>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button className="btn-primary btn-sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</button>
                         <button className="btn-sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</button>
                         <button className="btn-sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</button>

@@ -97,13 +97,13 @@ export default function AdminUsersPage() {
       {error && <div className="error-box">{error}</div>}
       {success && <div className="success-box">{success}</div>}
 
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           type="text"
           placeholder="Suche nach Name, E-Mail, Adresse, Diät..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, maxWidth: 400 }}
+          style={{ flex: 1, minWidth: 220, maxWidth: 400 }}
         />
         {search && (
           <span className="text-sm text-muted">
@@ -112,83 +112,85 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>E-Mail</th>
-            <th>Adresse</th>
-            <th>Max Gäste</th>
-            <th>Diät</th>
-            <th>Typ</th>
-            <th>Aktionen</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredUsers.map((u: any) => (
-            <tr key={u.id} style={u.isSuperAdmin ? { background: '#f5f3ff' } : undefined}>
-              {editingId === u.id ? (
-                <>
-                  <td>{u.id}</td>
-                  <td><input value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} style={{width:120}} /></td>
-                  <td>{u.email}</td>
-                  <td><input value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} style={{width:180}} /></td>
-                  <td><input type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} style={{width:60}} /></td>
-                  <td><input value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} style={{width:100}} /></td>
-                  <td>{getUserTypeBadge(u)}</td>
-                  <td>
-                    <div className="flex gap-2">
-                      <button className="btn-sm btn-primary" onClick={() => handleSave(u.id)}>✓</button>
-                      <button className="btn-sm" onClick={() => setEditingId(null)}>✕</button>
-                    </div>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td>{u.id}</td>
-                  <td>{u.name} {u.id === user?.id && <span style={{ color: '#7c3aed', fontSize: '0.8rem' }}>(du)</span>}</td>
-                  <td className="text-sm">{u.email}</td>
-                  <td className="text-sm">{u.address || '–'}</td>
-                  <td>{u.maxGuests}</td>
-                  <td className="text-sm">{u.diet || '–'}</td>
-                  <td>{getUserTypeBadge(u)}</td>
-                  <td>
-                    <div className="flex gap-2">
-                      <button className="btn-sm" onClick={() => startEdit(u)}>✏️</button>
-                      {u.id !== user?.id && (
-                        <button className="btn-sm btn-danger" onClick={() => handleDelete(u.id)}>🗑️</button>
-                      )}
-                      {isSuperAdmin && u.id !== user?.id && (
-                        <button
-                          className="btn-sm"
-                          style={{
-                            background: u.isSuperAdmin ? '#7c3aed' : '#e5e7eb',
-                            color: u.isSuperAdmin ? '#fff' : '#374151',
-                            border: '1px solid #d1d5db',
-                          }}
-                          onClick={() => handleToggleSuperAdmin(u.id, u.isSuperAdmin)}
-                          disabled={togglingSuperAdmin === u.id}
-                          title={u.isSuperAdmin ? 'Super-Admin entfernen' : 'Zum Super-Admin machen'}
-                        >
-                          {togglingSuperAdmin === u.id ? '...' : '⭐'}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </>
-              )}
-            </tr>
-          ))}
-          {filteredUsers.length === 0 && search && (
+      <div className="table-wrapper">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={9} style={{ textAlign: 'center', padding: '1.5rem', color: '#999' }}>
-                Keine Benutzer gefunden für „{search}"
-              </td>
+              <th>ID</th>
+              <th>Name</th>
+              <th>E-Mail</th>
+              <th>Adresse</th>
+              <th>Max Gäste</th>
+              <th>Diät</th>
+              <th>Typ</th>
+              <th>Aktionen</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredUsers.map((u: any) => (
+              <tr key={u.id} style={u.isSuperAdmin ? { background: '#f5f3ff' } : undefined}>
+                {editingId === u.id ? (
+                  <>
+                    <td>{u.id}</td>
+                    <td><input value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></td>
+                    <td>{u.email}</td>
+                    <td><input value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} /></td>
+                    <td><input type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} /></td>
+                    <td><input value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} /></td>
+                    <td>{getUserTypeBadge(u)}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="btn-sm btn-primary" onClick={() => handleSave(u.id)}>✓</button>
+                        <button className="btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td>{u.id}</td>
+                    <td>{u.name} {u.id === user?.id && <span style={{ color: '#7c3aed', fontSize: '0.8rem' }}>(du)</span>}</td>
+                    <td className="text-sm">{u.email}</td>
+                    <td className="text-sm">{u.address || '–'}</td>
+                    <td>{u.maxGuests}</td>
+                    <td className="text-sm">{u.diet || '–'}</td>
+                    <td>{getUserTypeBadge(u)}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="btn-sm" onClick={() => startEdit(u)}>✏️</button>
+                        {u.id !== user?.id && (
+                          <button className="btn-sm btn-danger" onClick={() => handleDelete(u.id)}>🗑️</button>
+                        )}
+                        {isSuperAdmin && u.id !== user?.id && (
+                          <button
+                            className="btn-sm"
+                            style={{
+                              background: u.isSuperAdmin ? '#7c3aed' : '#e5e7eb',
+                              color: u.isSuperAdmin ? '#fff' : '#374151',
+                              border: '1px solid #d1d5db',
+                            }}
+                            onClick={() => handleToggleSuperAdmin(u.id, u.isSuperAdmin)}
+                            disabled={togglingSuperAdmin === u.id}
+                            title={u.isSuperAdmin ? 'Super-Admin entfernen' : 'Zum Super-Admin machen'}
+                          >
+                            {togglingSuperAdmin === u.id ? '...' : '⭐'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+            {filteredUsers.length === 0 && search && (
+              <tr>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '1.5rem', color: '#999' }}>
+                  Keine Benutzer gefunden für „{search}"
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

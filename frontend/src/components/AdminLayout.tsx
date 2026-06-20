@@ -7,6 +7,7 @@ export default function AdminLayout() {
     <div>
       <div className="admin-tabs" style={{
         display: 'flex',
+        flexWrap: 'wrap',
         gap: 0,
         borderBottom: '2px solid #e5e7eb',
         marginBottom: '1.5rem',

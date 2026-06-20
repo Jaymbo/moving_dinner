@@ -112,8 +112,7 @@ export default function AdminAssignmentPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-4">
-
+      <div className="flex flex-wrap items-center gap-4 mb-4">
         <button className="btn-sm" onClick={() => navigate('/groups')}>← Zurück</button>
         <h1 className="page-title" style={{ marginBottom: 0 }}>Zuweisung – {formatDate(meeting.date)}</h1>
         {meeting.frozen && <span className="badge badge-gray">Abgeschlossen</span>}
@@ -125,7 +124,7 @@ export default function AdminAssignmentPage() {
 
       <div className="card mb-4">
         <h3>Anmeldungen ({responseList.length})</h3>
-        <div className="flex gap-4 mt-2">
+        <div className="flex flex-wrap gap-4 mt-2">
           <span>🏠 Will hosten: <strong>{hostWishes['will_host'] || 0}</strong></span>
           <span>🤷 Egal: <strong>{hostWishes['indifferent'] || 0}</strong></span>
           <span>❌ Kann nicht: <strong>{hostWishes['cannot_host'] || 0}</strong></span>
@@ -133,7 +132,7 @@ export default function AdminAssignmentPage() {
       </div>
 
       {!meeting.frozen && isAdmin && (
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <button className="btn-primary" onClick={handleAutoAssign} disabled={assigning}>
             {assigning ? 'Berechne...' : '🔄 Automatische Zuweisung'}
           </button>

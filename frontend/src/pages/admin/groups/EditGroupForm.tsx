@@ -50,7 +50,7 @@ export default function EditGroupForm({ group, onSaved, onCancel, onError }: Edi
             <option value="all">Alle Mitglieder</option>
           </select>
         </div>
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4">
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Speichern...' : '💾 Speichern'}
           </button>

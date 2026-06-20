@@ -85,46 +85,48 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
       {groupMeetings.length === 0 ? (
         <p className="text-sm text-muted">Noch keine Treffen in dieser Gruppe.</p>
       ) : (
-        <table style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Deadline</th>
-              <th>Status</th>
-              <th>Anmeldungen</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groupMeetings.map((m: any) => (
-              <tr key={m.id}>
-                <td>{formatDate(m.date)}</td>
-                <td className="text-sm">{formatDeadline(m.deadline)}</td>
-                <td>
-                  {m.frozen ? (
-                    <span className="badge badge-gray">Abgeschlossen</span>
-                  ) : (
-                    <span className="badge badge-green">Offen</span>
-                  )}
-                </td>
-                <td style={{ textAlign: 'center' }}>{m._count?.responses ?? 0}</td>
-                <td>
-                  <div className="flex gap-1">
-                    <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>Zuweisung</Link>
-                    {!m.frozen && isAdmin && (
-                      <>
-                        <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>RSVP</button>
-                        <button className="btn-sm" onClick={() => handleRemind(m.id)}>Erinnern</button>
-                        <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>Abschließen</button>
-                        <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️</button>
-                      </>
-                    )}
-                  </div>
-                </td>
+        <div className="table-wrapper">
+          <table style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Anmeldungen</th>
+                <th>Aktionen</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {groupMeetings.map((m: any) => (
+                <tr key={m.id}>
+                  <td>{formatDate(m.date)}</td>
+                  <td className="text-sm">{formatDeadline(m.deadline)}</td>
+                  <td>
+                    {m.frozen ? (
+                      <span className="badge badge-gray">Abgeschlossen</span>
+                    ) : (
+                      <span className="badge badge-green">Offen</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>{m._count?.responses ?? 0}</td>
+                  <td>
+                    <div className="card-actions">
+                      <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>Zuweisung</Link>
+                      {!m.frozen && isAdmin && (
+                        <>
+                          <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>RSVP</button>
+                          <button className="btn-sm" onClick={() => handleRemind(m.id)}>Erinnern</button>
+                          <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>Abschließen</button>
+                          <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
