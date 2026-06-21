@@ -1,19 +1,21 @@
 import { Router, Response } from 'express';
 import prisma from '../db.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { validateBody, validateParams, typedParams } from '../middleware/validate.js';
+import { AppError } from '../middleware/errorHandler.js';
 import { assignHosts } from '../services/assignment.js';
+import { idParamSchema, responseBodySchema } from '../validation/schemas.js';
 
 const router = Router();
 
 // GET /api/meetings/:id/responses – All responses for a meeting
-router.get('/:id/responses', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const meetingId = parseInt(req.params.id, 10);
-    if (isNaN(meetingId)) {
-      res.status(400).json({ error: 'Invalid meeting id' });
-      return;
-    }
-
+router.get(
+  '/:id/responses',
+  requireAuth,
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
     const responses = await prisma.response.findMany({
       where: { meetingId },
       include: {
@@ -23,43 +25,35 @@ router.get('/:id/responses', requireAuth, async (req: AuthRequest, res: Response
       orderBy: { createdAt: 'asc' },
     });
     res.json(responses);
-  } catch (err) {
-    console.error('List responses error:', err);
-    res.status(500).json({ error: 'Failed to list responses' });
-  }
-});
+  })
+);
 
 // POST /api/meetings/:id/responses – Create response (logged-in user)
-router.post('/:id/responses', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const meetingId = parseInt(req.params.id, 10);
+router.post(
+  '/:id/responses',
+  requireAuth,
+  validateParams(idParamSchema),
+  validateBody(responseBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
     const { hostWish } = req.body;
-
-    if (!['will_host', 'indifferent', 'cannot_host'].includes(hostWish)) {
-      res.status(400).json({ error: 'hostWish must be will_host, indifferent, or cannot_host' });
-      return;
-    }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
     if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
     if (meeting.frozen) {
-      res.status(403).json({ error: 'Meeting is frozen' });
-      return;
+      throw new AppError('Meeting is frozen', 403, 'MEETING_FROZEN');
     }
     if (meeting.deadline < new Date()) {
-      res.status(403).json({ error: 'Deadline has passed' });
-      return;
+      throw new AppError('Deadline has passed', 403, 'DEADLINE_PASSED');
     }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
     if (existing) {
-      res.status(409).json({ error: 'Already responded' });
-      return;
+      throw new AppError('Already responded', 409, 'ALREADY_RESPONDED');
     }
 
     const response = await prisma.response.create({
@@ -70,43 +64,35 @@ router.post('/:id/responses', requireAuth, async (req: AuthRequest, res: Respons
     await assignHosts(meetingId);
 
     res.status(201).json(response);
-  } catch (err) {
-    console.error('Create response error:', err);
-    res.status(500).json({ error: 'Failed to create response' });
-  }
-});
+  })
+);
 
 // PUT /api/meetings/:id/responses/me – Update own response
-router.put('/:id/responses/me', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const meetingId = parseInt(req.params.id, 10);
+router.put(
+  '/:id/responses/me',
+  requireAuth,
+  validateParams(idParamSchema),
+  validateBody(responseBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
     const { hostWish } = req.body;
-
-    if (!['will_host', 'indifferent', 'cannot_host'].includes(hostWish)) {
-      res.status(400).json({ error: 'hostWish must be will_host, indifferent, or cannot_host' });
-      return;
-    }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
     if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
     if (meeting.frozen) {
-      res.status(403).json({ error: 'Meeting is frozen' });
-      return;
+      throw new AppError('Meeting is frozen', 403, 'MEETING_FROZEN');
     }
     if (meeting.deadline < new Date()) {
-      res.status(403).json({ error: 'Deadline has passed' });
-      return;
+      throw new AppError('Deadline has passed', 403, 'DEADLINE_PASSED');
     }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
     if (!existing) {
-      res.status(404).json({ error: 'No response found' });
-      return;
+      throw new AppError('No response found', 404, 'RESPONSE_NOT_FOUND');
     }
 
     const updated = await prisma.response.update({
@@ -114,49 +100,41 @@ router.put('/:id/responses/me', requireAuth, async (req: AuthRequest, res: Respo
       data: { hostWish },
     });
 
-    // Re-run assignment
     await assignHosts(meetingId);
 
     res.json(updated);
-  } catch (err) {
-    console.error('Update response error:', err);
-    res.status(500).json({ error: 'Failed to update response' });
-  }
-});
+  })
+);
 
 // DELETE /api/meetings/:id/responses/me – Withdraw own response
-router.delete('/:id/responses/me', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const meetingId = parseInt(req.params.id, 10);
+router.delete(
+  '/:id/responses/me',
+  requireAuth,
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
     if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
     if (meeting.frozen) {
-      res.status(403).json({ error: 'Meeting is frozen' });
-      return;
+      throw new AppError('Meeting is frozen', 403, 'MEETING_FROZEN');
     }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
     if (!existing) {
-      res.status(404).json({ error: 'No response found' });
-      return;
+      throw new AppError('No response found', 404, 'RESPONSE_NOT_FOUND');
     }
 
     await prisma.response.delete({ where: { id: existing.id } });
 
-    // Re-run assignment
     await assignHosts(meetingId);
 
     res.json({ success: true });
-  } catch (err) {
-    console.error('Delete response error:', err);
-    res.status(500).json({ error: 'Failed to delete response' });
-  }
-});
+  })
+);
 
 export default router;

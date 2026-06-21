@@ -1,8 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { ZodSchema, ZodError, z } from 'zod';
 import { ValidationError } from './errorHandler.js';
 
-export function validateBody<T>(schema: ZodSchema<T>) {
+/** Inferred parameter type for a Zod schema used with validateParams. */
+export type InferParams<S extends ZodSchema> = z.infer<S>;
+
+/** Returns typed request params after they have been validated by validateParams. */
+export function typedParams<S extends ZodSchema>(req: Request, _schema: S): z.infer<S> {
+  return req.params as unknown as z.infer<S>;
+}
+
+export function validateBody<T>(schema: ZodSchema<T>): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
@@ -14,14 +22,26 @@ export function validateBody<T>(schema: ZodSchema<T>) {
   };
 }
 
-export function validateParams<T extends Record<string, string>>(schema: ZodSchema<T>) {
+export function validateParams<T extends Record<string, unknown>>(schema: ZodSchema<T>): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.params);
     if (!result.success) {
       next(new ValidationError(formatZodError(result.error)));
       return;
     }
-    req.params = result.data as Record<string, string>;
+    req.params = result.data as unknown as Request['params'];
+    next();
+  };
+}
+
+export function validateQuery<T extends Record<string, unknown>>(schema: ZodSchema<T>): RequestHandler {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      next(new ValidationError(formatZodError(result.error)));
+      return;
+    }
+    req.query = result.data as unknown as Request['query'];
     next();
   };
 }

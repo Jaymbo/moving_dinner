@@ -1,4 +1,4 @@
-import prisma from '../db.js';
+import { Prisma } from '@prisma/client';
 
 /**
  * Host-Zuweisungsalgorithmus (portiert aus update Host verteilung.gs)
@@ -27,10 +27,12 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
+type HostWish = 'will_host' | 'indifferent' | 'cannot_host';
+
 interface Participant {
   userId: number;
   name: string;
-  hostWish: 'will_host' | 'indifferent' | 'cannot_host';
+  hostWish: HostWish;
   maxGuests: number;
   score: number;
   isHost: boolean;
@@ -39,300 +41,314 @@ interface Participant {
   minQuota: number;
   targetQuota: number;
   assignedList: number[]; // matrix indices of assigned guests
-  matrixIdx?: number;
 }
 
 /**
  * Main assignment function. Reads responses + scores + matrix for a meeting,
  * computes host assignments, and writes assigned_host to responses.
+ *
+ * The whole DB-read/write cycle runs inside a Serializable transaction so the
+ * assignment is always based on a consistent snapshot and concurrent writes to
+ * the same meeting's responses cannot interleave.
  */
 export async function assignHosts(meetingId: number): Promise<void> {
-  const meeting = await prisma.meeting.findUnique({
-    where: { id: meetingId },
-    include: { responses: { include: { user: true } } },
-  });
+  const { default: prisma } = await import('../db.js');
 
-  if (!meeting || meeting.frozen) return;
+  await prisma.$transaction(
+    async (tx) => {
+      const meeting = await tx.meeting.findUnique({
+        where: { id: meetingId },
+        include: { responses: { include: { user: true } } },
+      });
 
-  if (meeting.responses.length === 0) return;
+      if (!meeting || meeting.frozen) return;
+      if (meeting.responses.length === 0) return;
 
-  // Load scores for all participants in this group
-  const groupId = meeting.groupId;
-  const userIds = meeting.responses.map((r) => r.userId);
-  const scores = await prisma.score.findMany({ where: { userId: { in: userIds }, groupId } });
-  const scoreMap = new Map(scores.map((s) => [s.userId, Number(s.score)]));
+      const groupId = meeting.groupId;
+      const userIds = meeting.responses.map((r) => r.userId);
 
-  // Load meetup matrix for all participants in this group
-  const matrixEntries = await prisma.meetupMatrix.findMany({
-    where: {
-      groupId,
-      OR: [{ userAId: { in: userIds } }, { userBId: { in: userIds } }],
-    },
-  });
+      const scores = await tx.score.findMany({
+        where: { userId: { in: userIds }, groupId },
+      });
+      const scoreMap = new Map(scores.map((s) => [s.userId, Number(s.score)]));
 
-  // Build a lookup: (smallerId, largerId) -> count
-  const matrixMap = new Map<string, number>();
-  for (const entry of matrixEntries) {
-    const key = `${Math.min(entry.userAId, entry.userBId)}_${Math.max(entry.userAId, entry.userBId)}`;
-    matrixMap.set(key, entry.count);
-  }
+      const matrixEntries = await tx.meetupMatrix.findMany({
+        where: {
+          groupId,
+          OR: [{ userAId: { in: userIds } }, { userBId: { in: userIds } }],
+        },
+      });
 
-  function getMatrixCount(userA: number, userB: number): number {
-    const key = `${Math.min(userA, userB)}_${Math.max(userA, userB)}`;
-    return matrixMap.get(key) || 0;
-  }
-
-  // Build participant data
-  const participants: Participant[] = meeting.responses.map((r) => ({
-    userId: r.userId,
-    name: r.user.name,
-    hostWish: r.hostWish as 'will_host' | 'indifferent' | 'cannot_host',
-    maxGuests: r.user.maxGuests || 0,
-    score: scoreMap.get(r.userId) || 0,
-    isHost: false,
-    assignedGuests: 0,
-    assignedTo: '',
-    minQuota: 0,
-    targetQuota: 0,
-    assignedList: [],
-  }));
-
-  // === 1. Host-Selektion ===
-  const candidateScores = participants.map((p) => {
-    let adjusted: number;
-    if (p.hostWish === 'will_host') adjusted = HIGH_SCORE + p.score;
-    else if (p.hostWish === 'cannot_host') adjusted = LOW_SCORE + p.score;
-    else if (p.maxGuests <= 0) adjusted = LOW_SCORE + p.score;
-    else adjusted = p.score;
-
-    // "Will hosten" with maxGuests=0 gets default capacity
-    if (p.hostWish === 'will_host' && p.maxGuests <= 0) {
-      p.maxGuests = DEFAULT_MAX_GUESTS;
-    }
-
-    p.score = adjusted;
-    return { participant: p, score: adjusted };
-  });
-
-  candidateScores.sort((a, b) => {
-    if (a.score === b.score) {
-      const ha = hashString(a.participant.name + '|' + TIE_SEED);
-      const hb = hashString(b.participant.name + '|' + TIE_SEED);
-      return ha - hb;
-    }
-    return b.score > a.score ? 1 : -1;
-  });
-
-  // Select hosts iteratively until capacity covers all guests
-  let assignedCapacity = 0;
-  const selectedHosts: Participant[] = [];
-  for (const cand of candidateScores) {
-    const p = cand.participant;
-    if (selectedHosts.includes(p)) continue;
-    if (p.maxGuests <= 0 && p.hostWish !== 'will_host') continue;
-    selectedHosts.push(p);
-    assignedCapacity += p.maxGuests;
-    const guestsCount = participants.length - selectedHosts.length;
-    if (assignedCapacity >= guestsCount) break;
-  }
-
-  // Mark hosts
-  const hosts: Participant[] = [];
-  for (const h of selectedHosts) {
-    h.isHost = true;
-    hosts.push(h);
-  }
-
-  if (hosts.length === 0) {
-    // No hosts available – nothing to assign
-    return;
-  }
-
-  // === 2. FairShare-Anpassung ===
-  const guests = participants.filter((p) => !p.isHost);
-  const totalGuestsToAssignPre = guests.length;
-  const fairShare = Math.ceil(totalGuestsToAssignPre / hosts.length);
-  hosts.forEach((h) => {
-    if (h.maxGuests < fairShare) {
-      h.maxGuests = fairShare;
-    }
-  });
-
-  // === 3. minQuota / targetQuota ===
-  const totalGuests = participants.filter((p) => !p.isHost).length;
-  const caps = hosts.map((h) => h.maxGuests);
-  const H = hosts.length;
-
-  // minQuota
-  const minBase = H > 0 ? Math.floor(totalGuests / H) : 0;
-  const minQuotas = hosts.map((h, i) => Math.min(caps[i], minBase));
-  const minSum = minQuotas.reduce((a, b) => a + b, 0);
-  let minRemaining = Math.max(0, totalGuests - minSum);
-  let minIdx = 0;
-  while (minRemaining > 0 && minIdx < hosts.length * 1000) {
-    const i = minIdx % hosts.length;
-    if (minQuotas[i] < caps[i]) {
-      minQuotas[i]++;
-      minRemaining--;
-    }
-    minIdx++;
-  }
-
-  // targetQuota
-  const targetBase = H > 0 ? Math.ceil(totalGuests / H) : 0;
-  const quotas = hosts.map((h, i) => Math.min(caps[i], targetBase));
-  const assignedQuotaSum = quotas.reduce((a, b) => a + b, 0);
-  let remaining = Math.max(0, totalGuests - assignedQuotaSum);
-  let idx = 0;
-  while (remaining > 0 && idx < hosts.length * 1000) {
-    const i = idx % hosts.length;
-    if (quotas[i] < caps[i]) {
-      quotas[i]++;
-      remaining--;
-    }
-    idx++;
-  }
-
-  hosts.forEach((h, i) => {
-    h.minQuota = minQuotas[i] || 0;
-    h.targetQuota = quotas[i] || 0;
-    h.assignedGuests = 0;
-    h.assignedList = [];
-  });
-
-  // === 4. Gast-Verteilung (matrix-gestützt) ===
-  function computeGuestHostScore(guest: Participant, host: Participant): number {
-    let score = 0;
-    score += getMatrixCount(guest.userId, host.userId);
-    if (host.assignedList.length > 0) {
-      let sum = 0;
-      for (const otherIdx of host.assignedList) {
-        sum += getMatrixCount(guest.userId, otherIdx);
+      const matrixMap = new Map<string, number>();
+      for (const entry of matrixEntries) {
+        const key = `${Math.min(entry.userAId, entry.userBId)}_${Math.max(entry.userAId, entry.userBId)}`;
+        matrixMap.set(key, entry.count);
       }
-      score += sum / host.assignedList.length;
-    }
-    return score;
-  }
 
-  const hasMatrix = matrixEntries.length > 0;
+      function getMatrixCount(userA: number, userB: number): number {
+        const key = `${Math.min(userA, userB)}_${Math.max(userA, userB)}`;
+        return matrixMap.get(key) || 0;
+      }
 
-  if (hasMatrix) {
-    // Phase 1: minQuota
-    for (const g of guests) {
-      if (g.assignedTo) continue;
-      const minQuotaCandidates = hosts.filter((h) => h.assignedGuests < h.minQuota);
-      if (minQuotaCandidates.length === 0) break;
+      const participants: Participant[] = meeting.responses.map((r) => ({
+        userId: r.userId,
+        name: r.user.name,
+        hostWish: r.hostWish as HostWish,
+        maxGuests: r.user.maxGuests || 0,
+        score: scoreMap.get(r.userId) || 0,
+        isHost: false,
+        assignedGuests: 0,
+        assignedTo: '',
+        minQuota: 0,
+        targetQuota: 0,
+        assignedList: [],
+      }));
 
-      let bestHost: Participant | null = null;
-      let bestScore = Infinity;
-      for (const h of minQuotaCandidates) {
-        const score = computeGuestHostScore(g, h);
-        const remainingCap = h.maxGuests - h.assignedGuests;
-        const tieBreaker = -remainingCap * 0.001;
-        const finalScore = score + tieBreaker;
-        if (finalScore < bestScore) {
-          bestScore = finalScore;
-          bestHost = h;
+      // === 1. Host-Selektion ===
+      const candidateScores = participants.map((p) => {
+        let adjusted: number;
+        if (p.hostWish === 'will_host') adjusted = HIGH_SCORE + p.score;
+        else if (p.hostWish === 'cannot_host') adjusted = LOW_SCORE + p.score;
+        else if (p.maxGuests <= 0) adjusted = LOW_SCORE + p.score;
+        else adjusted = p.score;
+
+        if (p.hostWish === 'will_host' && p.maxGuests <= 0) {
+          p.maxGuests = DEFAULT_MAX_GUESTS;
         }
-      }
 
-      if (bestHost) {
-        g.assignedTo = bestHost.name;
-        bestHost.assignedGuests++;
-        bestHost.assignedList.push(g.userId);
-      }
-    }
+        p.score = adjusted;
+        return { participant: p, score: adjusted };
+      });
 
-    // Phase 2: targetQuota
-    for (const g of guests) {
-      if (g.assignedTo) continue;
-      const targetCandidates = hosts.filter((h) => h.assignedGuests < h.targetQuota);
-      if (targetCandidates.length === 0) {
-        g.assignedTo = 'unassigned';
-        continue;
-      }
-
-      let bestHost: Participant | null = null;
-      let bestScore = Infinity;
-      for (const h of targetCandidates) {
-        const score = computeGuestHostScore(g, h);
-        const remainingCap = h.maxGuests - h.assignedGuests;
-        const tieBreaker = -remainingCap * 0.001;
-        const finalScore = score + tieBreaker;
-        if (finalScore < bestScore) {
-          bestScore = finalScore;
-          bestHost = h;
+      candidateScores.sort((a, b) => {
+        if (a.score === b.score) {
+          const ha = hashString(a.participant.name + '|' + TIE_SEED);
+          const hb = hashString(b.participant.name + '|' + TIE_SEED);
+          return ha - hb;
         }
+        return b.score > a.score ? 1 : -1;
+      });
+
+      let assignedCapacity = 0;
+      const selectedHosts: Participant[] = [];
+      for (const cand of candidateScores) {
+        const p = cand.participant;
+        if (selectedHosts.includes(p)) continue;
+        if (p.maxGuests <= 0 && p.hostWish !== 'will_host') continue;
+        selectedHosts.push(p);
+        assignedCapacity += p.maxGuests;
+        const guestsCount = participants.length - selectedHosts.length;
+        if (assignedCapacity >= guestsCount) break;
       }
 
-      if (bestHost) {
-        g.assignedTo = bestHost.name;
-        bestHost.assignedGuests++;
-        bestHost.assignedList.push(g.userId);
+      const hosts: Participant[] = [];
+      for (const h of selectedHosts) {
+        h.isHost = true;
+        hosts.push(h);
+      }
+
+      if (hosts.length === 0) {
+        return;
+      }
+
+      // === 2. FairShare-Anpassung ===
+      const guests = participants.filter((p) => !p.isHost);
+      const totalGuestsToAssignPre = guests.length;
+      const fairShare = Math.ceil(totalGuestsToAssignPre / hosts.length);
+      hosts.forEach((h) => {
+        if (h.maxGuests < fairShare) {
+          h.maxGuests = fairShare;
+        }
+      });
+
+      // === 3. minQuota / targetQuota ===
+      const totalGuests = participants.filter((p) => !p.isHost).length;
+      const caps = hosts.map((h) => h.maxGuests);
+      const H = hosts.length;
+
+      const minBase = H > 0 ? Math.floor(totalGuests / H) : 0;
+      const minQuotas = hosts.map((h, i) => Math.min(caps[i], minBase));
+      const minSum = minQuotas.reduce((a, b) => a + b, 0);
+      let minRemaining = Math.max(0, totalGuests - minSum);
+      let minIdx = 0;
+      while (minRemaining > 0 && minIdx < hosts.length * 1000) {
+        const i = minIdx % hosts.length;
+        if (minQuotas[i] < caps[i]) {
+          minQuotas[i]++;
+          minRemaining--;
+        }
+        minIdx++;
+      }
+
+      const targetBase = H > 0 ? Math.ceil(totalGuests / H) : 0;
+      const quotas = hosts.map((h, i) => Math.min(caps[i], targetBase));
+      const assignedQuotaSum = quotas.reduce((a, b) => a + b, 0);
+      let remaining = Math.max(0, totalGuests - assignedQuotaSum);
+      let idx = 0;
+      while (remaining > 0 && idx < hosts.length * 1000) {
+        const i = idx % hosts.length;
+        if (quotas[i] < caps[i]) {
+          quotas[i]++;
+          remaining--;
+        }
+        idx++;
+      }
+
+      hosts.forEach((h, i) => {
+        h.minQuota = minQuotas[i] || 0;
+        h.targetQuota = quotas[i] || 0;
+        h.assignedGuests = 0;
+        h.assignedList = [];
+      });
+
+      // === 4. Gast-Verteilung ===
+      function computeGuestHostScore(guest: Participant, host: Participant): number {
+        let score = 0;
+        score += getMatrixCount(guest.userId, host.userId);
+        if (host.assignedList.length > 0) {
+          let sum = 0;
+          for (const otherIdx of host.assignedList) {
+            sum += getMatrixCount(guest.userId, otherIdx);
+          }
+          score += sum / host.assignedList.length;
+        }
+        return score;
+      }
+
+      const hasMatrix = matrixEntries.length > 0;
+
+      if (hasMatrix) {
+        // Phase 1: minQuota
+        for (const g of guests) {
+          if (g.assignedTo) continue;
+          const minQuotaCandidates = hosts.filter((h) => h.assignedGuests < h.minQuota);
+          if (minQuotaCandidates.length === 0) break;
+
+          let bestHost: Participant | null = null;
+          let bestScore = Infinity;
+          for (const h of minQuotaCandidates) {
+            const score = computeGuestHostScore(g, h);
+            const remainingCap = h.maxGuests - h.assignedGuests;
+            const tieBreaker = -remainingCap * 0.001;
+            const finalScore = score + tieBreaker;
+            if (finalScore < bestScore) {
+              bestScore = finalScore;
+              bestHost = h;
+            }
+          }
+
+          if (bestHost) {
+            g.assignedTo = bestHost.name;
+            bestHost.assignedGuests++;
+            bestHost.assignedList.push(g.userId);
+          }
+        }
+
+        // Phase 2: targetQuota
+        for (const g of guests) {
+          if (g.assignedTo) continue;
+          const targetCandidates = hosts.filter((h) => h.assignedGuests < h.targetQuota);
+          if (targetCandidates.length === 0) {
+            g.assignedTo = 'unassigned';
+            continue;
+          }
+
+          let bestHost: Participant | null = null;
+          let bestScore = Infinity;
+          for (const h of targetCandidates) {
+            const score = computeGuestHostScore(g, h);
+            const remainingCap = h.maxGuests - h.assignedGuests;
+            const tieBreaker = -remainingCap * 0.001;
+            const finalScore = score + tieBreaker;
+            if (finalScore < bestScore) {
+              bestScore = finalScore;
+              bestHost = h;
+            }
+          }
+
+          if (bestHost) {
+            g.assignedTo = bestHost.name;
+            bestHost.assignedGuests++;
+            bestHost.assignedList.push(g.userId);
+          } else {
+            g.assignedTo = 'unassigned';
+          }
+        }
       } else {
-        g.assignedTo = 'unassigned';
-      }
-    }
-  } else {
-    // Fallback: round-robin
-    // Phase 1: minQuota
-    for (const g of guests) {
-      let assigned = false;
-      let loopCount = 0;
-      while (!assigned && loopCount < hosts.length) {
-        const h = hosts[loopCount % hosts.length];
-        if (h.assignedGuests < h.minQuota) {
-          g.assignedTo = h.name;
-          h.assignedGuests++;
-          assigned = true;
+        // Fallback: round-robin
+        for (const g of guests) {
+          let assigned = false;
+          let loopCount = 0;
+          while (!assigned && loopCount < hosts.length) {
+            const h = hosts[loopCount % hosts.length];
+            if (h.assignedGuests < h.minQuota) {
+              g.assignedTo = h.name;
+              h.assignedGuests++;
+              assigned = true;
+            }
+            loopCount++;
+          }
         }
-        loopCount++;
-      }
-    }
-    // Phase 2: targetQuota
-    let hostIndex = 0;
-    for (const g of guests) {
-      if (g.assignedTo) continue;
-      let assigned = false;
-      let loopCount = 0;
-      while (!assigned && loopCount < hosts.length) {
-        const h = hosts[hostIndex];
-        if (h.assignedGuests < h.targetQuota) {
-          g.assignedTo = h.name;
-          h.assignedGuests++;
-          assigned = true;
-        } else {
+
+        let hostIndex = 0;
+        for (const g of guests) {
+          if (g.assignedTo) continue;
+          let assigned = false;
+          let loopCount = 0;
+          while (!assigned && loopCount < hosts.length) {
+            const h = hosts[hostIndex];
+            if (h.assignedGuests < h.targetQuota) {
+              g.assignedTo = h.name;
+              h.assignedGuests++;
+              assigned = true;
+            } else {
+              hostIndex = (hostIndex + 1) % hosts.length;
+              loopCount++;
+            }
+          }
+          if (!assigned) g.assignedTo = 'unassigned';
           hostIndex = (hostIndex + 1) % hosts.length;
-          loopCount++;
         }
       }
-      if (!assigned) g.assignedTo = 'unassigned';
-      hostIndex = (hostIndex + 1) % hosts.length;
+
+      hosts.forEach((h) => {
+        h.assignedTo = h.name;
+      });
+
+      // === Write assignments to DB ===
+      const updates = participants
+        .map((p) => {
+          const response = meeting.responses.find((r) => r.userId === p.userId);
+          if (!response) return null;
+
+          let assignedHostId: number | null = null;
+          if (p.isHost) {
+            assignedHostId = p.userId;
+          } else if (p.assignedTo && p.assignedTo !== 'unassigned') {
+            const hostParticipant = participants.find((pp) => pp.name === p.assignedTo);
+            if (hostParticipant) assignedHostId = hostParticipant.userId;
+          }
+
+          return {
+            responseId: response.id,
+            assignedHost: assignedHostId,
+          };
+        })
+        .filter((u): u is { responseId: number; assignedHost: number | null } => u !== null);
+
+      await Promise.all(
+        updates.map((u) =>
+          tx.response.update({
+            where: { id: u.responseId },
+            data: { assignedHost: u.assignedHost },
+          })
+        )
+      );
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 10000,
     }
-  }
-
-  // Hosts themselves: assignedTo = their own name (they are hosting)
-  hosts.forEach((h) => {
-    h.assignedTo = h.name;
-  });
-
-  // === Write assignments to DB ===
-  for (const p of participants) {
-    const response = meeting.responses.find((r) => r.userId === p.userId);
-    if (!response) continue;
-
-    // Find the assigned host's userId
-    let assignedHostId: number | null = null;
-    if (p.isHost) {
-      assignedHostId = p.userId; // host is assigned to themselves
-    } else if (p.assignedTo && p.assignedTo !== 'unassigned') {
-      const hostParticipant = participants.find((pp) => pp.name === p.assignedTo);
-      if (hostParticipant) assignedHostId = hostParticipant.userId;
-    }
-
-    await prisma.response.update({
-      where: { id: response.id },
-      data: { assignedHost: assignedHostId },
-    });
-  }
+  );
 }

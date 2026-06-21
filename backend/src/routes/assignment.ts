@@ -2,7 +2,11 @@ import { Router, Response } from 'express';
 import prisma from '../db.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { requireMeetingGroupAdmin } from '../middleware/groupAuth.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { validateBody, validateParams, typedParams } from '../middleware/validate.js';
+import { AppError } from '../middleware/errorHandler.js';
 import { assignHosts } from '../services/assignment.js';
+import { idParamSchema, manualAssignmentBodySchema } from '../validation/schemas.js';
 
 const router = Router();
 
@@ -11,63 +15,50 @@ router.post(
   '/:id/assign',
   requireAuth,
   requireMeetingGroupAdmin,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const meetingId = parseInt(req.params.id, 10);
-      if (isNaN(meetingId)) {
-        res.status(400).json({ error: 'Invalid meeting id' });
-        return;
-      }
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
 
-      const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        res.status(404).json({ error: 'Meeting not found' });
-        return;
-      }
-      if (meeting.frozen) {
-        res.status(403).json({ error: 'Meeting is frozen' });
-        return;
-      }
-
-      await assignHosts(meetingId);
-
-      const responses = await prisma.response.findMany({
-        where: { meetingId },
-        include: {
-          user: { select: { id: true, name: true } },
-          assignedHostUser: { select: { id: true, name: true, address: true } },
-        },
-      });
-
-      res.json({ success: true, assignments: responses });
-    } catch (err) {
-      console.error('Assign error:', err);
-      res.status(500).json({ error: 'Failed to assign hosts' });
+    const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+    if (!meeting) {
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
-  }
+    if (meeting.frozen) {
+      throw new AppError('Meeting is frozen', 403, 'MEETING_FROZEN');
+    }
+
+    await assignHosts(meetingId);
+
+    const responses = await prisma.response.findMany({
+      where: { meetingId },
+      include: {
+        user: { select: { id: true, name: true } },
+        assignedHostUser: { select: { id: true, name: true, address: true } },
+      },
+    });
+
+    res.json({ success: true, assignments: responses });
+  })
 );
 
 // GET /api/assignment/:id – Get current assignment for a meeting (group members only)
-router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const meetingId = parseInt(req.params.id, 10);
-    if (isNaN(meetingId)) {
-      res.status(400).json({ error: 'Invalid meeting id' });
-      return;
-    }
+router.get(
+  '/:id',
+  requireAuth,
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
 
     // Check group membership
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
     if (!meeting) {
-      res.status(404).json({ error: 'Meeting not found' });
-      return;
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
     const membership = await prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId: meeting.groupId, userId: req.userId! } },
     });
     if (!membership) {
-      res.status(403).json({ error: 'Not a member of this group' });
-      return;
+      throw new AppError('Not a member of this group', 403, 'FORBIDDEN');
     }
 
     const responses = await prisma.response.findMany({
@@ -105,58 +96,40 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     }
 
     res.json({ meetingId, hostGroups, unassigned });
-  } catch (err) {
-    console.error('Get assignment error:', err);
-    res.status(500).json({ error: 'Failed to get assignment' });
-  }
-});
+  })
+);
 
 // PUT /api/assignment/:id – Manual assignment override (group admin only, before freeze)
 router.put(
   '/:id',
   requireAuth,
   requireMeetingGroupAdmin,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const meetingId = parseInt(req.params.id, 10);
-      if (isNaN(meetingId)) {
-        res.status(400).json({ error: 'Invalid meeting id' });
-        return;
-      }
+  validateParams(idParamSchema),
+  validateBody(manualAssignmentBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: meetingId } = typedParams(req, idParamSchema);
 
-      const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        res.status(404).json({ error: 'Meeting not found' });
-        return;
-      }
-      if (meeting.frozen) {
-        res.status(403).json({ error: 'Meeting is frozen, cannot change assignment' });
-        return;
-      }
-
-      const { assignments } = req.body as {
-        assignments: { userId: number; assignedHost: number | null }[];
-      };
-      if (!Array.isArray(assignments)) {
-        res.status(400).json({ error: 'assignments array is required' });
-        return;
-      }
-
-      await prisma.$transaction(
-        assignments.map((a) =>
-          prisma.response.updateMany({
-            where: { meetingId, userId: a.userId },
-            data: { assignedHost: a.assignedHost },
-          })
-        )
-      );
-
-      res.json({ success: true });
-    } catch (err) {
-      console.error('Manual assignment error:', err);
-      res.status(500).json({ error: 'Failed to update assignment' });
+    const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+    if (!meeting) {
+      throw new AppError('Meeting not found', 404, 'MEETING_NOT_FOUND');
     }
-  }
+    if (meeting.frozen) {
+      throw new AppError('Meeting is frozen, cannot change assignment', 403, 'MEETING_FROZEN');
+    }
+
+    const { assignments } = req.body;
+
+    await prisma.$transaction(
+      assignments.map((a: { userId: number; assignedHost: number | null }) =>
+        prisma.response.updateMany({
+          where: { meetingId, userId: a.userId },
+          data: { assignedHost: a.assignedHost },
+        })
+      )
+    );
+
+    res.json({ success: true });
+  })
 );
 
 export default router;

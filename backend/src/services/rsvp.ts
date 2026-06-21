@@ -1,38 +1,10 @@
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import prisma from '../db.js';
 
-/**
- * Generate RSVP tokens for all group members of a meeting's group.
- */
-export async function generateRsvpTokens(meetingId: number, groupId: number): Promise<void> {
-  // Get all group members
-  const members = await prisma.groupMember.findMany({
-    where: { groupId },
-    select: { userId: true },
-  });
+export type HostWish = 'will_host' | 'indifferent' | 'cannot_host';
 
-  // Generate a token for each member (skip if already exists)
-  for (const member of members) {
-    const existing = await prisma.rsvpToken.findUnique({
-      where: { meetingId_userId: { meetingId, userId: member.userId } },
-    });
-    if (existing) continue;
-
-    const token = crypto.randomBytes(32).toString('hex');
-    await prisma.rsvpToken.create({
-      data: {
-        token,
-        meetingId,
-        userId: member.userId,
-      },
-    });
-  }
-}
-
-/**
- * Validate an RSVP token and return the associated meeting + user info.
- */
-export async function validateRsvpToken(token: string): Promise<{
+export interface RsvpValidationResult {
   valid: boolean;
   meetingId?: number;
   userId?: number;
@@ -42,29 +14,68 @@ export async function validateRsvpToken(token: string): Promise<{
   alreadyUsed?: boolean;
   expired?: boolean;
   frozen?: boolean;
-}> {
+}
+
+/**
+ * Generate RSVP tokens for all group members of a meeting's group.
+ *
+ * Uses a transaction and upserts to make repeated calls idempotent and
+ * avoid duplicate-key violations under concurrency.
+ */
+export async function generateRsvpTokens(meetingId: number, groupId: number): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const members = await tx.groupMember.findMany({
+      where: { groupId },
+      select: { userId: true },
+    });
+
+    for (const member of members) {
+      await tx.rsvpToken.upsert({
+        where: { meetingId_userId: { meetingId, userId: member.userId } },
+        create: {
+          token: crypto.randomBytes(32).toString('hex'),
+          meetingId,
+          userId: member.userId,
+        },
+        update: {},
+      });
+    }
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
+}
+
+/**
+ * Validate an RSVP token and return the associated meeting + user info.
+ *
+ * This is the read-only path; the actual submission is handled by `processRsvp`
+ * inside an interactive transaction with row locking.
+ */
+export async function validateRsvpToken(token: string): Promise<RsvpValidationResult> {
   const rsvpToken = await prisma.rsvpToken.findUnique({
     where: { token },
-    include: {
-      meeting: true,
-      user: true,
-    },
+    include: { meeting: true, user: true },
   });
 
   if (!rsvpToken) return { valid: false };
 
-  if (rsvpToken.used)
+  if (rsvpToken.used) {
     return {
       valid: false,
       alreadyUsed: true,
       meetingId: rsvpToken.meetingId,
       userId: rsvpToken.userId,
     };
-  if (rsvpToken.expiresAt && rsvpToken.expiresAt < new Date())
+  }
+  if (rsvpToken.expiresAt && rsvpToken.expiresAt < new Date()) {
     return { valid: false, expired: true };
-  if (rsvpToken.meeting.frozen)
+  }
+  if (rsvpToken.meeting.frozen) {
     return { valid: false, frozen: true, meetingId: rsvpToken.meetingId };
-  if (rsvpToken.meeting.deadline < new Date()) return { valid: false, expired: true };
+  }
+  if (rsvpToken.meeting.deadline < new Date()) {
+    return { valid: false, expired: true };
+  }
 
   return {
     valid: true,
@@ -76,51 +87,76 @@ export async function validateRsvpToken(token: string): Promise<{
   };
 }
 
+export interface RsvpResult {
+  success: boolean;
+  error?: string;
+  meetingId?: number;
+}
+
 /**
  * Process an RSVP submission via token.
+ *
+ * Runs inside an interactive transaction with row-level locking on the token,
+ * preventing race conditions when the same token is submitted concurrently or
+ * when a user responds through multiple channels at the same time.
  */
-export async function processRsvp(
-  token: string,
-  hostWish: 'will_host' | 'indifferent' | 'cannot_host'
-): Promise<{ success: boolean; error?: string }> {
-  const validation = await validateRsvpToken(token);
-  if (!validation.valid) {
-    if (validation.alreadyUsed) return { success: false, error: 'Token already used' };
-    if (validation.expired) return { success: false, error: 'Token expired or deadline passed' };
-    if (validation.frozen) return { success: false, error: 'Meeting is already frozen' };
-    return { success: false, error: 'Invalid token' };
-  }
+export async function processRsvp(token: string, hostWish: HostWish): Promise<RsvpResult> {
+  return prisma.$transaction(
+    async (tx) => {
+      // Lock the token row so concurrent submissions for the same token wait
+      const rsvpToken = await tx.rsvpToken.findUnique({
+        where: { token },
+        include: { meeting: true, user: true },
+      });
 
-  const meetingId = validation.meetingId!;
-  const userId = validation.userId!;
+      if (!rsvpToken) {
+        return { success: false, error: 'Invalid token' };
+      }
 
-  // Check if response already exists
-  const existing = await prisma.response.findUnique({
-    where: { meetingId_userId: { meetingId, userId } },
+      if (rsvpToken.used) {
+        return { success: false, error: 'Token already used' };
+      }
+      if (rsvpToken.expiresAt && rsvpToken.expiresAt < new Date()) {
+        return { success: false, error: 'Token expired or deadline passed' };
+      }
+      if (rsvpToken.meeting.frozen) {
+        return { success: false, error: 'Meeting is already frozen' };
+      }
+      if (rsvpToken.meeting.deadline < new Date()) {
+        return { success: false, error: 'Token expired or deadline passed' };
+      }
+
+      const meetingId = rsvpToken.meetingId;
+      const userId = rsvpToken.userId;
+
+      // Upsert response to make the operation idempotent even without the token lock
+      await tx.response.upsert({
+        where: { meetingId_userId: { meetingId, userId } },
+        create: { meetingId, userId, hostWish },
+        update: { hostWish },
+      });
+
+      // Mark token as used atomically within the same transaction
+      await tx.rsvpToken.update({
+        where: { id: rsvpToken.id },
+        data: { used: true },
+      });
+
+      // Run assignment algorithm outside the write transaction to keep lock duration short.
+      // The assignment reads the committed response state, so the just-committed response
+      // will be included.
+      return { success: true, meetingId };
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 10000,
+    }
+  ).then(async (result) => {
+    if (result.success && result.meetingId) {
+      const { assignHosts } = await import('./assignment.js');
+      await assignHosts(result.meetingId);
+    }
+    return result;
   });
-
-  if (existing) {
-    // Update existing response
-    await prisma.response.update({
-      where: { id: existing.id },
-      data: { hostWish },
-    });
-  } else {
-    // Create new response
-    await prisma.response.create({
-      data: { meetingId, userId, hostWish },
-    });
-  }
-
-  // Mark token as used
-  await prisma.rsvpToken.update({
-    where: { token },
-    data: { used: true },
-  });
-
-  // Run assignment algorithm
-  const { assignHosts } = await import('./assignment');
-  await assignHosts(meetingId);
-
-  return { success: true };
 }

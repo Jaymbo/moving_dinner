@@ -1,12 +1,19 @@
 import { Router, Response } from 'express';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { validateBody, validateParams, typedParams } from '../middleware/validate.js';
 import { validateRsvpToken, processRsvp } from '../services/rsvp.js';
+import { rsvpTokenParamSchema, responseBodySchema } from '../validation/schemas.js';
 
 const router = Router();
 
 // GET /api/rsvp/:token – Get RSVP info (no auth required)
-router.get('/:token', async (req, res: Response) => {
-  try {
-    const result = await validateRsvpToken(req.params.token);
+router.get(
+  '/:token',
+  validateParams(rsvpTokenParamSchema),
+  asyncHandler(async (req, res: Response) => {
+    const { token } = typedParams(req, rsvpTokenParamSchema);
+
+    const result = await validateRsvpToken(token);
     if (!result.valid) {
       if (result.alreadyUsed) {
         res.json({ valid: false, reason: 'already_used', meetingId: result.meetingId });
@@ -32,31 +39,25 @@ router.get('/:token', async (req, res: Response) => {
       meetingDate: result.meetingDate,
       deadline: result.deadline,
     });
-  } catch (err) {
-    console.error('RSVP lookup error:', err);
-    res.status(500).json({ error: 'Failed to look up RSVP' });
-  }
-});
+  })
+);
 
 // POST /api/rsvp/:token – Submit RSVP (no auth required)
-router.post('/:token', async (req, res: Response) => {
-  try {
+router.post(
+  '/:token',
+  validateParams(rsvpTokenParamSchema),
+  validateBody(responseBodySchema),
+  asyncHandler(async (req, res: Response) => {
+    const { token } = typedParams(req, rsvpTokenParamSchema);
     const { hostWish } = req.body;
-    if (!['will_host', 'indifferent', 'cannot_host'].includes(hostWish)) {
-      res.status(400).json({ error: 'hostWish must be will_host, indifferent, or cannot_host' });
-      return;
-    }
 
-    const result = await processRsvp(req.params.token, hostWish);
+    const result = await processRsvp(token, hostWish);
     if (result.success) {
       res.json({ success: true });
     } else {
       res.status(400).json({ error: result.error });
     }
-  } catch (err) {
-    console.error('RSVP submit error:', err);
-    res.status(500).json({ error: 'Failed to process RSVP' });
-  }
-});
+  })
+);
 
 export default router;

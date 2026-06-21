@@ -1,13 +1,25 @@
 import { Router, Response } from 'express';
 import prisma from '../db.js';
 import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { validateBody, validateParams, typedParams } from '../middleware/validate.js';
+import { AppError } from '../middleware/errorHandler.js';
 import bcrypt from 'bcryptjs';
+import {
+  idParamSchema,
+  updateUserBodySchema,
+  convertUserBodySchema,
+  toggleSuperAdminBodySchema,
+} from '../validation/schemas.js';
 
 const router = Router();
 
 // GET /api/users - All users (Super-Admin only)
-router.get('/', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/',
+  requireAuth,
+  requireSuperAdmin,
+  asyncHandler(async (_req: AuthRequest, res: Response) => {
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -24,20 +36,16 @@ router.get('/', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: R
       orderBy: { id: 'asc' },
     });
     res.json(users);
-  } catch (err) {
-    console.error('List users error:', err);
-    res.status(500).json({ error: 'Failed to list users' });
-  }
-});
+  })
+);
 
 // GET /api/users/:id
-router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: 'Invalid id' });
-      return;
-    }
+router.get(
+  '/:id',
+  requireAuth,
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = typedParams(req, idParamSchema);
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -56,24 +64,20 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
     });
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
     res.json(user);
-  } catch (err) {
-    console.error('Get user error:', err);
-    res.status(500).json({ error: 'Failed to get user' });
-  }
-});
+  })
+);
 
 // PUT /api/users/:id - Edit user (own profile, group admin, or super-admin)
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: 'Invalid id' });
-      return;
-    }
+router.put(
+  '/:id',
+  requireAuth,
+  validateParams(idParamSchema),
+  validateBody(updateUserBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = typedParams(req, idParamSchema);
 
     // Allow editing own profile, or if user is a group admin / super-admin
     if (req.userId !== id) {
@@ -81,15 +85,12 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         where: { id: req.userId },
         select: { isSuperAdmin: true },
       });
-      if (currentUser?.isSuperAdmin) {
-        // Super-admins can edit any profile
-      } else {
+      if (!currentUser?.isSuperAdmin) {
         const adminMembership = await prisma.groupMember.findFirst({
           where: { userId: req.userId!, role: 'admin' },
         });
         if (!adminMembership) {
-          res.status(403).json({ error: 'Can only edit your own profile' });
-          return;
+          throw new AppError('Can only edit your own profile', 403, 'FORBIDDEN');
         }
       }
     }
@@ -117,20 +118,16 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
     });
     res.json(user);
-  } catch (err) {
-    console.error('Update user error:', err);
-    res.status(500).json({ error: 'Failed to update user' });
-  }
-});
+  })
+);
 
 // DELETE /api/users/:id - Delete account (own, or super-admin can delete any)
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: 'Invalid id' });
-      return;
-    }
+router.delete(
+  '/:id',
+  requireAuth,
+  validateParams(idParamSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = typedParams(req, idParamSchema);
 
     // Only allow deleting own profile, unless super-admin
     if (req.userId !== id) {
@@ -139,8 +136,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         select: { isSuperAdmin: true },
       });
       if (!currentUser?.isSuperAdmin) {
-        res.status(403).json({ error: 'Can only delete your own account' });
-        return;
+        throw new AppError('Can only delete your own account', 403, 'FORBIDDEN');
       }
     }
 
@@ -172,41 +168,31 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 
     await prisma.user.delete({ where: { id } });
     res.json({ success: true });
-  } catch (err) {
-    console.error('Delete user error:', err);
-    res.status(500).json({ error: 'Failed to delete account' });
-  }
-});
+  })
+);
 
 // POST /api/users/:id/convert - Guest to regular user
-router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: 'Invalid id' });
-      return;
-    }
+router.post(
+  '/:id/convert',
+  requireAuth,
+  validateParams(idParamSchema),
+  validateBody(convertUserBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = typedParams(req, idParamSchema);
 
     if (req.userId !== id) {
-      res.status(403).json({ error: 'Can only convert your own account' });
-      return;
+      throw new AppError('Can only convert your own account', 403, 'FORBIDDEN');
     }
 
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
     if (!user.isGuest) {
-      res.status(400).json({ error: 'User is not a guest' });
-      return;
+      throw new AppError('User is not a guest', 400, 'NOT_A_GUEST');
     }
 
     const { password, address, maxGuests } = req.body;
-    if (!password) {
-      res.status(400).json({ error: 'password is required' });
-      return;
-    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const updated = await prisma.user.update({
@@ -222,58 +208,41 @@ router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response)
     // Score entries are created per group when the user joins a group or when scores are recalculated.
     // No global score entry is created here anymore.
 
-    const { generateToken } = await import('../middleware/auth');
+    const { generateToken } = await import('../middleware/auth.js');
     const token = generateToken(id);
     res.json({ id: updated.id, name: updated.name, email: updated.email, token });
-  } catch (err) {
-    console.error('Convert user error:', err);
-    res.status(500).json({ error: 'Failed to convert user' });
-  }
-});
+  })
+);
 
 // PUT /api/users/:id/super-admin - Toggle super-admin status (Super-Admin only)
 router.put(
   '/:id/super-admin',
   requireAuth,
   requireSuperAdmin,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) {
-        res.status(400).json({ error: 'Invalid id' });
-        return;
-      }
+  validateParams(idParamSchema),
+  validateBody(toggleSuperAdminBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = typedParams(req, idParamSchema);
+    const { isSuperAdmin } = req.body;
 
-      const { isSuperAdmin } = req.body;
-      if (typeof isSuperAdmin !== 'boolean') {
-        res.status(400).json({ error: 'isSuperAdmin must be a boolean' });
-        return;
-      }
-
-      // Prevent removing your own super-admin status
-      if (req.userId === id && !isSuperAdmin) {
-        res.status(400).json({ error: 'Cannot remove your own super-admin status' });
-        return;
-      }
-
-      const user = await prisma.user.findUnique({ where: { id } });
-      if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-
-      const updated = await prisma.user.update({
-        where: { id },
-        data: { isSuperAdmin },
-        select: { id: true, name: true, email: true, isSuperAdmin: true },
-      });
-
-      res.json(updated);
-    } catch (err) {
-      console.error('Toggle super-admin error:', err);
-      res.status(500).json({ error: 'Failed to update super-admin status' });
+    // Prevent removing your own super-admin status
+    if (req.userId === id && !isSuperAdmin) {
+      throw new AppError('Cannot remove your own super-admin status', 400, 'INVALID_OPERATION');
     }
-  }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { isSuperAdmin },
+      select: { id: true, name: true, email: true, isSuperAdmin: true },
+    });
+
+    res.json(updated);
+  })
 );
 
 export default router;

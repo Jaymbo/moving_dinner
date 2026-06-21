@@ -3,32 +3,31 @@ import prisma from '../db.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { requireAuth, generateToken, AuthRequest } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { validateBody } from '../middleware/validate.js';
+import { AppError } from '../middleware/errorHandler.js';
 import { sendPasswordResetEmail } from '../services/email.js';
 import { config } from '../config.js';
+import {
+  registerBodySchema,
+  loginBodySchema,
+  forgotPasswordBodySchema,
+  resetPasswordBodySchema,
+  changePasswordBodySchema,
+} from '../validation/schemas.js';
 
 const router = Router();
 
 // POST /api/auth/register
-router.post('/register', async (req, res: Response) => {
-  try {
+router.post(
+  '/register',
+  validateBody(registerBodySchema),
+  asyncHandler(async (req, res: Response) => {
     const { name, email, password, address, maxGuests, diet } = req.body;
 
-    if (!name || !email || !password) {
-      res.status(400).json({ error: 'name, email, and password are required' });
-      return;
-    }
-
-    const parsedMaxGuests = typeof maxGuests === 'number' ? maxGuests : parseInt(maxGuests, 10);
-    if (maxGuests !== undefined && (Number.isNaN(parsedMaxGuests) || parsedMaxGuests < 0)) {
-      res.status(400).json({ error: 'maxGuests must be a non-negative number' });
-      return;
-    }
-
-    // Check if email already taken
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      res.status(409).json({ error: 'Email already registered' });
-      return;
+      throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -42,9 +41,9 @@ router.post('/register', async (req, res: Response) => {
         name,
         email,
         passwordHash,
-        address: address || null,
-        maxGuests: maxGuests || 0,
-        diet: diet || null,
+        address,
+        maxGuests,
+        diet,
         isGuest: false,
         isSuperAdmin: isFirstUser,
       },
@@ -58,32 +57,24 @@ router.post('/register', async (req, res: Response) => {
 
     const token = generateToken(user.id);
     res.status(201).json({ ...user, token });
-  } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ error: 'Failed to register' });
-  }
-});
+  })
+);
 
 // POST /api/auth/login
-router.post('/login', async (req, res: Response) => {
-  try {
+router.post(
+  '/login',
+  validateBody(loginBodySchema),
+  asyncHandler(async (req, res: Response) => {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      res.status(400).json({ error: 'email and password are required' });
-      return;
-    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
-      res.status(401).json({ error: 'Invalid email or password' });
-      return;
+      throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      res.status(401).json({ error: 'Invalid email or password' });
-      return;
+      throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
     const token = generateToken(user.id);
@@ -95,15 +86,14 @@ router.post('/login', async (req, res: Response) => {
       isSuperAdmin: user.isSuperAdmin,
       token,
     });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Failed to login' });
-  }
-});
+  })
+);
 
 // GET /api/auth/me
-router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: {
@@ -128,24 +118,18 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
       },
     });
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
     res.json(user);
-  } catch (err) {
-    console.error('Get me error:', err);
-    res.status(500).json({ error: 'Failed to get user info' });
-  }
-});
+  })
+);
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res: Response) => {
-  try {
+router.post(
+  '/forgot-password',
+  validateBody(forgotPasswordBodySchema),
+  asyncHandler(async (req, res: Response) => {
     const { email } = req.body;
-    if (!email) {
-      res.status(400).json({ error: 'E-Mail ist erforderlich' });
-      return;
-    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     // Always return success to prevent email enumeration
@@ -181,35 +165,22 @@ router.post('/forgot-password', async (req, res: Response) => {
     res.json({
       message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet',
     });
-  } catch (err) {
-    console.error('Forgot password error:', err);
-    // Still return success to prevent information leakage
-    res.json({
-      message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet',
-    });
-  }
-});
+  })
+);
 
 // POST /api/auth/reset-password
-router.post('/reset-password', async (req, res: Response) => {
-  try {
+router.post(
+  '/reset-password',
+  validateBody(resetPasswordBodySchema),
+  asyncHandler(async (req, res: Response) => {
     const { token, password } = req.body;
-    if (!token || !password) {
-      res.status(400).json({ error: 'Token und Passwort sind erforderlich' });
-      return;
-    }
-    if (password.length < 6) {
-      res.status(400).json({ error: 'Passwort muss mindestens 6 Zeichen lang sein' });
-      return;
-    }
 
     const resetToken = await prisma.passwordResetToken.findUnique({
       where: { token },
     });
 
     if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
-      res.status(400).json({ error: 'Ungültiger oder abgelaufener Link' });
-      return;
+      throw new AppError('Ungültiger oder abgelaufener Link', 400, 'INVALID_TOKEN');
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -227,37 +198,27 @@ router.post('/reset-password', async (req, res: Response) => {
     // Generate a new login token so the user is automatically logged in
     const jwt = generateToken(resetToken.userId);
     res.json({ message: 'Passwort erfolgreich geändert', token: jwt });
-  } catch (err) {
-    console.error('Reset password error:', err);
-    res.status(500).json({ error: 'Passwort konnte nicht zurückgesetzt werden' });
-  }
-});
+  })
+);
 
 // POST /api/auth/change-password
-router.post('/change-password', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
+router.post(
+  '/change-password',
+  requireAuth,
+  validateBody(changePasswordBodySchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      res.status(400).json({ error: 'Aktuelles und neues Passwort sind erforderlich' });
-      return;
-    }
-    if (newPassword.length < 6) {
-      res.status(400).json({ error: 'Neues Passwort muss mindestens 6 Zeichen lang sein' });
-      return;
-    }
 
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
     });
     if (!user || !user.passwordHash) {
-      res.status(400).json({ error: 'Benutzer hat kein Passwort gesetzt' });
-      return;
+      throw new AppError('Benutzer hat kein Passwort gesetzt', 400, 'NO_PASSWORD');
     }
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) {
-      res.status(401).json({ error: 'Aktuelles Passwort ist falsch' });
-      return;
+      throw new AppError('Aktuelles Passwort ist falsch', 401, 'INVALID_PASSWORD');
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
@@ -267,10 +228,7 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res: Respo
     });
 
     res.json({ message: 'Passwort erfolgreich geändert' });
-  } catch (err) {
-    console.error('Change password error:', err);
-    res.status(500).json({ error: 'Passwort konnte nicht geändert werden' });
-  }
-});
+  })
+);
 
 export default router;
