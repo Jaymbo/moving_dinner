@@ -1,0 +1,11 @@
+/home/movingdinner/moving_dinner/logs/backup-cron.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 movingdinner movingdinner
+    dateext
+    dateformat -%Y%m%d
+}
