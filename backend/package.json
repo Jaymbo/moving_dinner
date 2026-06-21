@@ -33,6 +33,7 @@
     "node-cron": "^4.4.1",
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
+    "tsx": "^4.19.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -49,7 +50,6 @@
     "globals": "^15.14.0",
     "prettier": "^3.4.2",
     "prisma": "^7.8.0",
-    "tsx": "^4.19.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.19.1",
     "vitest": "^4.1.9"
