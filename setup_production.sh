@@ -41,7 +41,35 @@ log_error() {
 check_root() {
     if [ "$EUID" -eq 0 ]; then
         log_error "Bitte dieses Skript NICHT als root ausführen!"
+        log_info "Führe es als normaler User aus, der Docker-Berechtigung hat."
+        log_info "Falls nötig: sudo usermod -aG docker \$USER && neu einloggen"
         exit 1
+    fi
+}
+
+check_docker_permission() {
+    # Test if current user can run docker without sudo
+    if ! docker info &> /dev/null; then
+        log_error "Keine Docker-Berechtigung!"
+        echo ""
+        echo "  Dein User '$(whoami)' kann Docker nicht ausführen."
+        echo ""
+        echo "  Lösung (als root ausführen):"
+        echo "    sudo usermod -aG docker $(whoami)"
+        echo "    sudo systemctl restart docker"
+        echo ""
+        echo "  Danach neu einloggen oder:"
+        echo "    newgrp docker"
+        echo ""
+        exit 1
+    fi
+}
+
+check_sudo_user() {
+    # Warn if user is commonly used for sudo but not recommended
+    if [ "$(whoami)" = "admin" ] || [ "$(whoami)" = "ubuntu" ] || [ "$(whoami)" = "deploy" ]; then
+        log_warning "User '$(whoami)' wird verwendet."
+        log_info "Stelle sicher, dass dieser User persistiert und nicht nur temporär ist."
     fi
 }
 
@@ -66,11 +94,18 @@ check_root
 
 log_info "Führe Pre-flight Checks durch..."
 
+# Check Docker permissions FIRST (before checking commands)
+check_docker_permission
+log_success "Docker-Berechtigung vorhanden (User: $(whoami))"
+
+# Check if using a recommended user
+check_sudo_user
+
 # Check required commands
 check_command docker
 check_command docker-compose
 
-# Check docker is running
+# Check docker is running (already tested in check_docker_permission, but be explicit)
 if ! docker info &> /dev/null; then
     log_error "Docker ist nicht laufend. Bitte starte Docker."
     exit 1
