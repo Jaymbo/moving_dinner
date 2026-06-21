@@ -1,11 +1,12 @@
 import React from 'react';
 import useAuth from '../../../context/useAuth';
+import type { GroupRole, GroupMember } from '../../../types/api';
 
 interface GroupMembersTableProps {
   groupId: number;
-  members: any[];
+  members: GroupMember[];
   isAdmin: boolean;
-  onChangeRole: (groupId: number, userId: number, role: string) => void;
+  onChangeRole: (groupId: number, userId: number, role: GroupRole) => void;
   onRemoveMember: (groupId: number, userId: number) => void;
 }
 
@@ -34,7 +35,7 @@ export default function GroupMembersTable({
             </tr>
           </thead>
           <tbody>
-            {members.map((m: any) => {
+            {members.map((m) => {
               const memberId = m.userId || m.user?.id;
               const isSelf = memberId === user?.id;
               return (
@@ -95,7 +96,7 @@ export default function GroupMembersTable({
 
       {/* Mobile: Cards */}
       <div className="mobile-card-list mt-2">
-        {members.map((m: any) => {
+        {members.map((m) => {
           const memberId = m.userId || m.user?.id;
           const isSelf = memberId === user?.id;
           return (

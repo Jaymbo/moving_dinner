@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { publicApi } from '../api/client';
+import type { PublicMeeting, HostWish } from '../types/api';
 
 export default function PublicRegisterPage() {
   const { meetingId } = useParams<{ meetingId: string }>();
   const navigate = useNavigate();
-  const [meeting, setMeeting] = useState<any>(null);
+  const [meeting, setMeeting] = useState<PublicMeeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [hostWish, setHostWish] = useState('indifferent');
+  const [hostWish, setHostWish] = useState<HostWish>('indifferent');
   const [diet, setDiet] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -18,14 +19,14 @@ export default function PublicRegisterPage() {
   const loadMeeting = useCallback(async () => {
     try {
       const meetings = await publicApi.activeMeetings();
-      const found = meetings.find((m: any) => m.id === parseInt(meetingId || ''));
+      const found = meetings.find((m) => m.id === parseInt(meetingId || ''));
       if (found) {
         setMeeting(found);
       } else {
         setError('Treffen nicht gefunden oder Anmeldung nicht mehr möglich');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setLoading(false);
     }
@@ -55,8 +56,8 @@ export default function PublicRegisterPage() {
       if (result.isGuest) {
         setTimeout(() => navigate('/login'), 3000);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setSubmitting(false);
     }

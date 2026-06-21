@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { rsvp } from '../api/client';
+import type { RsvpInfo, HostWish } from '../types/api';
 
 export default function RsvpPage() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [rsvpInfo, setRsvpInfo] = useState<any>(null);
-  const [hostWish, setHostWish] = useState<string>('indifferent');
+  const [rsvpInfo, setRsvpInfo] = useState<RsvpInfo | null>(null);
+  const [hostWish, setHostWish] = useState<HostWish>('indifferent');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -43,14 +44,15 @@ export default function RsvpPage() {
     try {
       await rsvp.submit(token, hostWish);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setSubmitting(false);
     }
   }
 
-  function formatDate(d: string) {
+  function formatDate(d: string | undefined) {
+    if (!d) return '-';
     return new Date(d).toLocaleDateString('de-DE', {
       day: '2-digit',
       month: '2-digit',
@@ -84,7 +86,7 @@ export default function RsvpPage() {
           <div className="success-box">
             <h3>✅ Anmeldung gespeichert!</h3>
             <p className="mt-2">
-              Vielen Dank, {rsvpInfo.userName}! Deine Anmeldung wurde erfolgreich gespeichert.
+              Vielen Dank, {rsvpInfo.userName ?? ''}! Deine Anmeldung wurde erfolgreich gespeichert.
             </p>
             <p className="text-sm text-muted mt-2">
               Du erhältst nach dem Anmeldeschluss eine E-Mail mit der Zuweisung.

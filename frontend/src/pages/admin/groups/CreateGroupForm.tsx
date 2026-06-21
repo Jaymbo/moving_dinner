@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { groups } from '../../../api/client';
 import { getJoinLink } from './groupUtils';
+import type { MeetingCreationPolicy } from '../../../types/api';
 
 interface CreateGroupFormProps {
   onCreated: () => void;
@@ -11,7 +12,7 @@ interface CreateGroupFormProps {
 export default function CreateGroupForm({ onCreated, onMessage, onError }: CreateGroupFormProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [meetingCreation, setMeetingCreation] = useState<string>('admin');
+  const [meetingCreation, setMeetingCreation] = useState<MeetingCreationPolicy>('admin');
   const [creating, setCreating] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,8 +29,8 @@ export default function CreateGroupForm({ onCreated, onMessage, onError }: Creat
       setDescription('');
       setMeetingCreation('admin');
       onCreated();
-    } catch (err: any) {
-      onError(err.message);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setCreating(false);
     }
@@ -49,7 +50,10 @@ export default function CreateGroupForm({ onCreated, onMessage, onError }: Creat
         </div>
         <div className="form-group">
           <label>Wer darf Treffen erstellen?</label>
-          <select value={meetingCreation} onChange={(e) => setMeetingCreation(e.target.value)}>
+          <select
+            value={meetingCreation}
+            onChange={(e) => setMeetingCreation(e.target.value as MeetingCreationPolicy)}
+          >
             <option value="admin">Nur Admins</option>
             <option value="all">Alle Mitglieder</option>
           </select>

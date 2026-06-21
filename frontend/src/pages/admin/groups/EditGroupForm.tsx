@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { groups } from '../../../api/client';
+import type { MeetingCreationPolicy, Group } from '../../../types/api';
 
 interface EditGroupFormProps {
-  group: any;
+  group: Group;
   onSaved: () => void;
   onCancel: () => void;
   onError: (error: string) => void;
@@ -11,7 +12,9 @@ interface EditGroupFormProps {
 export default function EditGroupForm({ group, onSaved, onCancel, onError }: EditGroupFormProps) {
   const [name, setName] = useState(group.name || '');
   const [description, setDescription] = useState(group.description || '');
-  const [meetingCreation, setMeetingCreation] = useState<string>(group.meetingCreation || 'admin');
+  const [meetingCreation, setMeetingCreation] = useState<MeetingCreationPolicy>(
+    group.meetingCreation || 'admin'
+  );
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,8 +27,8 @@ export default function EditGroupForm({ group, onSaved, onCancel, onError }: Edi
         meetingCreation,
       });
       onSaved();
-    } catch (err: any) {
-      onError(err.message);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setSaving(false);
     }
@@ -45,7 +48,10 @@ export default function EditGroupForm({ group, onSaved, onCancel, onError }: Edi
         </div>
         <div className="form-group">
           <label>Wer darf Treffen erstellen?</label>
-          <select value={meetingCreation} onChange={(e) => setMeetingCreation(e.target.value)}>
+          <select
+            value={meetingCreation}
+            onChange={(e) => setMeetingCreation(e.target.value as MeetingCreationPolicy)}
+          >
             <option value="admin">Nur Admins</option>
             <option value="all">Alle Mitglieder</option>
           </select>

@@ -1,23 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { featureRequests } from '../api/client';
+import type {
+  FeatureRequest,
+  FeatureRequestStatus,
+  FeatureRequestPriority,
+  FeatureRequestType,
+} from '../types/api';
 
 export default function AdminFeatureRequestsPage() {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<FeatureRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<FeatureRequestStatus | ''>('');
+  const [filterType, setFilterType] = useState<FeatureRequestType | ''>('');
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const filters: any = {};
+      const filters: { status?: FeatureRequestStatus; type?: FeatureRequestType } = {};
       if (filterStatus) filters.status = filterStatus;
       if (filterType) filters.type = filterType;
       const data = await featureRequests.list(filters);
       setRequests(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setLoading(false);
     }
@@ -31,21 +37,21 @@ export default function AdminFeatureRequestsPage() {
     void loadRequests();
   }, [loadRequests]);
 
-  async function handleUpdateStatus(id: number, status: string) {
+  async function handleUpdateStatus(id: number, status: FeatureRequestStatus) {
     try {
       await featureRequests.update(id, { status });
       await loadRequests();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
-  async function handleUpdatePriority(id: number, priority: string) {
+  async function handleUpdatePriority(id: number, priority: FeatureRequestPriority) {
     try {
       await featureRequests.update(id, { priority });
       await loadRequests();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
@@ -54,8 +60,8 @@ export default function AdminFeatureRequestsPage() {
     try {
       await featureRequests.delete(id);
       await loadRequests();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
@@ -69,14 +75,14 @@ export default function AdminFeatureRequestsPage() {
     });
   }
 
-  const statusColors: Record<string, string> = {
+  const statusColors: Record<FeatureRequestStatus, string> = {
     open: '#3b82f6',
     in_progress: '#f59e0b',
     done: '#10b981',
     rejected: '#ef4444',
   };
 
-  const priorityColors: Record<string, string> = {
+  const priorityColors: Record<FeatureRequestPriority, string> = {
     low: '#9ca3af',
     medium: '#f59e0b',
     high: '#ef4444',
@@ -94,7 +100,7 @@ export default function AdminFeatureRequestsPage() {
       <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          onChange={(e) => setFilterStatus(e.target.value as FeatureRequestStatus | '')}
           style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}
         >
           <option value="">Alle Status</option>
@@ -105,7 +111,7 @@ export default function AdminFeatureRequestsPage() {
         </select>
         <select
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
+          onChange={(e) => setFilterType(e.target.value as FeatureRequestType | '')}
           style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}
         >
           <option value="">Alle Typen</option>
@@ -123,7 +129,7 @@ export default function AdminFeatureRequestsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {requests.map((r: any) => (
+          {requests.map((r) => (
             <div key={r.id} className="card" style={{ padding: 16 }}>
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
@@ -146,7 +152,7 @@ export default function AdminFeatureRequestsPage() {
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Status:</span>
                   <select
                     value={r.status}
-                    onChange={(e) => handleUpdateStatus(r.id, e.target.value)}
+                    onChange={(e) => handleUpdateStatus(r.id, e.target.value as FeatureRequestStatus)}
                     style={{
                       padding: '2px 8px',
                       borderRadius: 12,
@@ -154,7 +160,7 @@ export default function AdminFeatureRequestsPage() {
                       fontSize: 12,
                       fontWeight: 600,
                       color: '#fff',
-                      background: statusColors[r.status] || '#6b7280',
+                      background: statusColors[r.status],
                       cursor: 'pointer',
                     }}
                   >
@@ -170,7 +176,7 @@ export default function AdminFeatureRequestsPage() {
                   </span>
                   <select
                     value={r.priority}
-                    onChange={(e) => handleUpdatePriority(r.id, e.target.value)}
+                    onChange={(e) => handleUpdatePriority(r.id, e.target.value as FeatureRequestPriority)}
                     style={{
                       padding: '2px 8px',
                       borderRadius: 12,
@@ -178,7 +184,7 @@ export default function AdminFeatureRequestsPage() {
                       fontSize: 12,
                       fontWeight: 600,
                       color: '#fff',
-                      background: priorityColors[r.priority] || '#6b7280',
+                      background: priorityColors[r.priority],
                       cursor: 'pointer',
                     }}
                   >

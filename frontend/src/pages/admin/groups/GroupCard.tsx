@@ -8,6 +8,7 @@ import GroupMembersTable from './GroupMembersTable';
 import InvitationsPanel from './InvitationsPanel';
 import GroupScoresPanel from './GroupScoresPanel';
 import GroupMeetingsPanel from './GroupMeetingsPanel';
+import type { GroupRole } from '../../../types/api';
 
 interface GroupCardProps {
   group: any;
@@ -50,14 +51,14 @@ export default function GroupCard(props: GroupCardProps) {
   const isAdmin = myRole === 'admin';
   const isMember = isActualMember(group, user?.id);
 
-  async function handleChangeRole(groupId: number, userId: number, newRole: string) {
+  async function handleChangeRole(groupId: number, userId: number, newRole: GroupRole) {
     try {
       await groups.changeRole(groupId, userId, newRole);
       const m = await groups.members(groupId);
       onMembersChange(m);
       onMessage('Rolle geändert!');
-    } catch (err: any) {
-      onError(err.message);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
@@ -68,8 +69,8 @@ export default function GroupCard(props: GroupCardProps) {
       const m = await groups.members(groupId);
       onMembersChange(m);
       onRefresh();
-    } catch (err: any) {
-      onError(err.message);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 

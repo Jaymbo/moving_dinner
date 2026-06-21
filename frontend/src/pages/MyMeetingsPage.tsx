@@ -6,16 +6,17 @@ import Alert from '../components/ui/Alert';
 import FormField from '../components/ui/FormField';
 import { Card, CardHeader } from '../components/ui/Card';
 import PageHeader from '../components/ui/PageHeader';
+import type { MyMeeting, GroupWithCounts, HostWish } from '../types/api';
 
 export default function MyMeetingsPage() {
-  const { user } = useAuth();
-  const [myMeetings, setMyMeetings] = useState<any[]>([]);
+  useAuth();
+  const [myMeetings, setMyMeetings] = useState<MyMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Creation state
   const [showCreate, setShowCreate] = useState(false);
-  const [creatableGroups, setCreatableGroups] = useState<any[]>([]);
+  const [creatableGroups, setCreatableGroups] = useState<GroupWithCounts[]>([]);
   const [newGroupId, setNewGroupId] = useState<number | null>(null);
   const [newDate, setNewDate] = useState('');
   const [newDeadlineDate, setNewDeadlineDate] = useState('');
@@ -25,26 +26,22 @@ export default function MyMeetingsPage() {
   const loadCreatableGroups = useCallback(async () => {
     try {
       const g = await groups.list();
-      const creatable = g.filter((group: any) => {
-        const role =
-          group.role ||
-          group.members?.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id)
-            ?.role;
-        return group.meetingCreation === 'all' || role === 'admin';
+      const creatable = g.filter((group) => {
+        return group.meetingCreation === 'all' || group.role === 'admin';
       });
       setCreatableGroups(creatable);
       if (creatable.length > 0) setNewGroupId(creatable[0].id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading creatable groups:', err);
     }
-  }, [user]);
+  }, []);
 
   const loadMeetings = useCallback(async () => {
     try {
       const data = await meetings.my();
       setMyMeetings(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setLoading(false);
     }
@@ -78,14 +75,14 @@ export default function MyMeetingsPage() {
       setNewDeadlineDate('');
       setNewDeadlineTime('23:59');
       await loadMeetings();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setCreating(false);
     }
   }
 
-  async function handleResponse(meetingId: number, hostWish: string) {
+  async function handleResponse(meetingId: number, hostWish: HostWish) {
     try {
       const existing = myMeetings.find((m) => m.id === meetingId);
       if (existing?.hasResponded) {
@@ -94,8 +91,8 @@ export default function MyMeetingsPage() {
         await responses.create(meetingId, hostWish);
       }
       await loadMeetings();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
@@ -103,8 +100,8 @@ export default function MyMeetingsPage() {
     try {
       await responses.deleteMine(meetingId);
       await loadMeetings();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     }
   }
 
