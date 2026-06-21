@@ -18,7 +18,11 @@ export default function CreateGroupForm({ onCreated, onMessage, onError }: Creat
     e.preventDefault();
     setCreating(true);
     try {
-      const result = await groups.create({ name, description: description || undefined, meetingCreation });
+      const result = await groups.create({
+        name,
+        description: description || undefined,
+        meetingCreation,
+      });
       onMessage(`Gruppe "${name}" erstellt! Einladungslink: ${getJoinLink(result.inviteCode)}`);
       setName('');
       setDescription('');
@@ -37,15 +41,15 @@ export default function CreateGroupForm({ onCreated, onMessage, onError }: Creat
       <form onSubmit={handleSubmit} className="mt-4">
         <div className="form-group">
           <label>Name</label>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} required />
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="form-group">
           <label>Beschreibung</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </div>
         <div className="form-group">
           <label>Wer darf Treffen erstellen?</label>
-          <select value={meetingCreation} onChange={e => setMeetingCreation(e.target.value)}>
+          <select value={meetingCreation} onChange={(e) => setMeetingCreation(e.target.value)}>
             <option value="admin">Nur Admins</option>
             <option value="all">Alle Mitglieder</option>
           </select>

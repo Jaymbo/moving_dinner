@@ -51,7 +51,11 @@ export default function RsvpPage() {
   }
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   }
 
   if (loading) return <div className="loading">Laden...</div>;
@@ -79,21 +83,34 @@ export default function RsvpPage() {
         ) : success ? (
           <div className="success-box">
             <h3>✅ Anmeldung gespeichert!</h3>
-            <p className="mt-2">Vielen Dank, {rsvpInfo.userName}! Deine Anmeldung wurde erfolgreich gespeichert.</p>
-            <p className="text-sm text-muted mt-2">Du erhältst nach dem Anmeldeschluss eine E-Mail mit der Zuweisung.</p>
+            <p className="mt-2">
+              Vielen Dank, {rsvpInfo.userName}! Deine Anmeldung wurde erfolgreich gespeichert.
+            </p>
+            <p className="text-sm text-muted mt-2">
+              Du erhältst nach dem Anmeldeschluss eine E-Mail mit der Zuweisung.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <p className="mb-2">Hallo <strong>{rsvpInfo.userName}</strong>,</p>
-            <p className="mb-4">du bist eingeladen zum Moving Dinner am <strong>{formatDate(rsvpInfo.meetingDate)}</strong>.</p>
-            <p className="text-sm text-muted mb-4">Anmeldeschluss: {formatDate(rsvpInfo.deadline)}</p>
+            <p className="mb-2">
+              Hallo <strong>{rsvpInfo.userName}</strong>,
+            </p>
+            <p className="mb-4">
+              du bist eingeladen zum Moving Dinner am{' '}
+              <strong>{formatDate(rsvpInfo.meetingDate)}</strong>.
+            </p>
+            <p className="text-sm text-muted mb-4">
+              Anmeldeschluss: {formatDate(rsvpInfo.deadline)}
+            </p>
 
             <div className="form-group">
               <label>Was ist deine Präferenz?</label>
               <div className="host-wish-options">
                 <label className={`host-wish-option ${hostWish === 'will_host' ? 'selected' : ''}`}>
                   <input
-                    type="radio" name="hostWish" value="will_host"
+                    type="radio"
+                    name="hostWish"
+                    value="will_host"
                     checked={hostWish === 'will_host'}
                     onChange={() => setHostWish('will_host')}
                   />
@@ -102,9 +119,13 @@ export default function RsvpPage() {
                     <div className="desc">Ich lade Gäste zu mir ein</div>
                   </div>
                 </label>
-                <label className={`host-wish-option ${hostWish === 'indifferent' ? 'selected' : ''}`}>
+                <label
+                  className={`host-wish-option ${hostWish === 'indifferent' ? 'selected' : ''}`}
+                >
                   <input
-                    type="radio" name="hostWish" value="indifferent"
+                    type="radio"
+                    name="hostWish"
+                    value="indifferent"
                     checked={hostWish === 'indifferent'}
                     onChange={() => setHostWish('indifferent')}
                   />
@@ -113,9 +134,13 @@ export default function RsvpPage() {
                     <div className="desc">Ich kann hosten oder Gast sein</div>
                   </div>
                 </label>
-                <label className={`host-wish-option ${hostWish === 'cannot_host' ? 'selected' : ''}`}>
+                <label
+                  className={`host-wish-option ${hostWish === 'cannot_host' ? 'selected' : ''}`}
+                >
                   <input
-                    type="radio" name="hostWish" value="cannot_host"
+                    type="radio"
+                    name="hostWish"
+                    value="cannot_host"
                     checked={hostWish === 'cannot_host'}
                     onChange={() => setHostWish('cannot_host')}
                   />
@@ -127,7 +152,12 @@ export default function RsvpPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary w-full" disabled={submitting} style={{ justifyContent: 'center' }}>
+            <button
+              type="submit"
+              className="btn-primary w-full"
+              disabled={submitting}
+              style={{ justifyContent: 'center' }}
+            >
               {submitting ? 'Speichern...' : 'Anmeldung absenden'}
             </button>
           </form>

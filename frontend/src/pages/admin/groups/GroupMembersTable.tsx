@@ -9,7 +9,13 @@ interface GroupMembersTableProps {
   onRemoveMember: (groupId: number, userId: number) => void;
 }
 
-export default function GroupMembersTable({ groupId, members, isAdmin, onChangeRole, onRemoveMember }: GroupMembersTableProps) {
+export default function GroupMembersTable({
+  groupId,
+  members,
+  isAdmin,
+  onChangeRole,
+  onRemoveMember,
+}: GroupMembersTableProps) {
   const { user } = useAuth();
 
   return (
@@ -20,7 +26,12 @@ export default function GroupMembersTable({ groupId, members, isAdmin, onChangeR
       <div className="table-wrapper mt-2 table-desktop">
         <table>
           <thead>
-            <tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Aktion</th></tr>
+            <tr>
+              <th>Name</th>
+              <th>E-Mail</th>
+              <th>Rolle</th>
+              <th>Aktion</th>
+            </tr>
           </thead>
           <tbody>
             {members.map((m: any) => {
@@ -30,26 +41,48 @@ export default function GroupMembersTable({ groupId, members, isAdmin, onChangeR
                 <tr key={m.id}>
                   <td>
                     {m.user.name}{' '}
-                    {m.user.isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', marginLeft: 2 }}>⭐</span>}
+                    {m.user.isSuperAdmin && (
+                      <span
+                        className="badge"
+                        style={{ background: '#7c3aed', color: '#fff', marginLeft: 2 }}
+                      >
+                        ⭐
+                      </span>
+                    )}
                     {m.user.isGuest && <span className="badge badge-yellow">Gast</span>}
                     {isSelf && <span className="text-sm text-muted">(du)</span>}
                   </td>
                   <td className="text-sm">{m.user.email}</td>
-                  <td><span className="badge badge-blue">{m.role}</span></td>
+                  <td>
+                    <span className="badge badge-blue">{m.role}</span>
+                  </td>
                   <td>
                     {isAdmin && !isSelf && (
                       <div className="card-actions">
                         {m.role === 'member' && (
-                          <button className="btn-sm" onClick={() => onChangeRole(groupId, memberId, 'admin')} title="Zum Admin machen">
+                          <button
+                            className="btn-sm"
+                            onClick={() => onChangeRole(groupId, memberId, 'admin')}
+                            title="Zum Admin machen"
+                          >
                             👑 Admin
                           </button>
                         )}
                         {m.role === 'admin' && (
-                          <button className="btn-sm" onClick={() => onChangeRole(groupId, memberId, 'member')} title="Zum Mitglied machen">
+                          <button
+                            className="btn-sm"
+                            onClick={() => onChangeRole(groupId, memberId, 'member')}
+                            title="Zum Mitglied machen"
+                          >
                             👤 Mitglied
                           </button>
                         )}
-                        <button className="btn-sm btn-danger" onClick={() => onRemoveMember(groupId, memberId)}>Entfernen</button>
+                        <button
+                          className="btn-sm btn-danger"
+                          onClick={() => onRemoveMember(groupId, memberId)}
+                        >
+                          Entfernen
+                        </button>
                       </div>
                     )}
                   </td>
@@ -71,27 +104,45 @@ export default function GroupMembersTable({ groupId, members, isAdmin, onChangeR
                 <div className="ui-mobile-card-main">
                   <span className="ui-mobile-card-value">
                     {m.user.name}{' '}
-                    {m.user.isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', marginLeft: 2 }}>⭐</span>}
+                    {m.user.isSuperAdmin && (
+                      <span
+                        className="badge"
+                        style={{ background: '#7c3aed', color: '#fff', marginLeft: 2 }}
+                      >
+                        ⭐
+                      </span>
+                    )}
                     {m.user.isGuest && <span className="badge badge-yellow">Gast</span>}
                     {isSelf && <span className="text-sm text-muted">(du)</span>}
                   </span>
-                  <span className="ui-mobile-card-label" style={{ wordBreak: 'break-all' }}>{m.user.email}</span>
+                  <span className="ui-mobile-card-label" style={{ wordBreak: 'break-all' }}>
+                    {m.user.email}
+                  </span>
                 </div>
                 <span className="badge badge-blue">{m.role}</span>
               </div>
               {isAdmin && !isSelf && (
                 <div className="ui-mobile-card-actions">
                   {m.role === 'member' && (
-                    <button className="btn-sm" onClick={() => onChangeRole(groupId, memberId, 'admin')}>
+                    <button
+                      className="btn-sm"
+                      onClick={() => onChangeRole(groupId, memberId, 'admin')}
+                    >
                       👑 Zum Admin machen
                     </button>
                   )}
                   {m.role === 'admin' && (
-                    <button className="btn-sm" onClick={() => onChangeRole(groupId, memberId, 'member')}>
+                    <button
+                      className="btn-sm"
+                      onClick={() => onChangeRole(groupId, memberId, 'member')}
+                    >
                       👤 Zum Mitglied machen
                     </button>
                   )}
-                  <button className="btn-sm btn-danger" onClick={() => onRemoveMember(groupId, memberId)}>
+                  <button
+                    className="btn-sm btn-danger"
+                    onClick={() => onRemoveMember(groupId, memberId)}
+                  >
                     Entfernen
                   </button>
                 </div>

@@ -15,7 +15,13 @@ interface AuthContextType {
   isAdminAnywhere: boolean;
   isSuperAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, address?: string, maxGuests?: number) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    address?: string,
+    maxGuests?: number
+  ) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -72,7 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(res.token);
     // Use isSuperAdmin from login response, then refresh full user data
     const initialSuperAdmin = !!(res as any).isSuperAdmin;
-    setUser({ id: res.id, name: res.name, email: res.email, isGuest: false, isSuperAdmin: initialSuperAdmin });
+    setUser({
+      id: res.id,
+      name: res.name,
+      email: res.email,
+      isGuest: false,
+      isSuperAdmin: initialSuperAdmin,
+    });
     setIsSuperAdmin(initialSuperAdmin);
     // Fetch full admin status after login
     try {
@@ -88,12 +100,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string, address?: string, maxGuests?: number) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    address?: string,
+    maxGuests?: number
+  ) => {
     const res = await auth.register(name, email, password, address, maxGuests);
     setToken(res.token);
     // Use isSuperAdmin from register response (first user gets super-admin)
     const initialSuperAdmin = !!(res as any).isSuperAdmin;
-    setUser({ id: res.id, name: res.name, email: res.email, isGuest: false, isSuperAdmin: initialSuperAdmin });
+    setUser({
+      id: res.id,
+      name: res.name,
+      email: res.email,
+      isGuest: false,
+      isSuperAdmin: initialSuperAdmin,
+    });
     setIsSuperAdmin(initialSuperAdmin);
     // New users (except first) are not admin anywhere
     if (!initialSuperAdmin) {
@@ -121,10 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdminAnywhere, isSuperAdmin, login, register, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, isAdminAnywhere, isSuperAdmin, login, register, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
-
-

@@ -37,15 +37,15 @@ export default function EditGroupForm({ group, onSaved, onCancel, onError }: Edi
       <form onSubmit={handleSubmit} className="mt-4">
         <div className="form-group">
           <label>Name</label>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} required />
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="form-group">
           <label>Beschreibung</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </div>
         <div className="form-group">
           <label>Wer darf Treffen erstellen?</label>
-          <select value={meetingCreation} onChange={e => setMeetingCreation(e.target.value)}>
+          <select value={meetingCreation} onChange={(e) => setMeetingCreation(e.target.value)}>
             <option value="admin">Nur Admins</option>
             <option value="all">Alle Mitglieder</option>
           </select>
@@ -54,7 +54,9 @@ export default function EditGroupForm({ group, onSaved, onCancel, onError }: Edi
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Speichern...' : '💾 Speichern'}
           </button>
-          <button type="button" className="btn-sm" onClick={onCancel}>Abbrechen</button>
+          <button type="button" className="btn-sm" onClick={onCancel}>
+            Abbrechen
+          </button>
         </div>
       </form>
     </div>

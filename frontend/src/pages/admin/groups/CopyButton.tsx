@@ -21,7 +21,7 @@ export default function CopyButton({ text, label }: { text: string; label?: stri
 
   return (
     <button className="btn-sm" onClick={handleCopy} title={text} style={{ fontSize: 12 }}>
-      {copied ? '✅ Kopiert!' : (label || '📋 Kopieren')}
+      {copied ? '✅ Kopiert!' : label || '📋 Kopieren'}
     </button>
   );
 }

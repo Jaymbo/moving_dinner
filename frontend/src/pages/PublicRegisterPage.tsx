@@ -94,35 +94,67 @@ export default function PublicRegisterPage() {
 
             <div className="form-group">
               <label>Name</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} required />
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="form-group">
               <label>E-Mail</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="form-group">
               <label>Ernährungsbesonderheiten</label>
-              <input type="text" value={diet} onChange={e => setDiet(e.target.value)} placeholder="z.B. vegetarisch, vegan, glutenfrei" />
+              <input
+                type="text"
+                value={diet}
+                onChange={(e) => setDiet(e.target.value)}
+                placeholder="z.B. vegetarisch, vegan, glutenfrei"
+              />
             </div>
             <div className="form-group">
               <label>Was ist deine Präferenz?</label>
               <div className="host-wish-options">
                 <label className={`host-wish-option ${hostWish === 'will_host' ? 'selected' : ''}`}>
-                  <input type="radio" name="hostWish" value="will_host" checked={hostWish === 'will_host'} onChange={() => setHostWish('will_host')} />
+                  <input
+                    type="radio"
+                    name="hostWish"
+                    value="will_host"
+                    checked={hostWish === 'will_host'}
+                    onChange={() => setHostWish('will_host')}
+                  />
                   <div>
                     <div className="label">🏠 Ich will hosten</div>
                     <div className="desc">Ich lade Gäste zu mir ein</div>
                   </div>
                 </label>
-                <label className={`host-wish-option ${hostWish === 'indifferent' ? 'selected' : ''}`}>
-                  <input type="radio" name="hostWish" value="indifferent" checked={hostWish === 'indifferent'} onChange={() => setHostWish('indifferent')} />
+                <label
+                  className={`host-wish-option ${hostWish === 'indifferent' ? 'selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="hostWish"
+                    value="indifferent"
+                    checked={hostWish === 'indifferent'}
+                    onChange={() => setHostWish('indifferent')}
+                  />
                   <div>
                     <div className="label">🤷 Mir egal</div>
                     <div className="desc">Ich kann hosten oder Gast sein</div>
                   </div>
                 </label>
-                <label className={`host-wish-option ${hostWish === 'cannot_host' ? 'selected' : ''}`}>
-                  <input type="radio" name="hostWish" value="cannot_host" checked={hostWish === 'cannot_host'} onChange={() => setHostWish('cannot_host')} />
+                <label
+                  className={`host-wish-option ${hostWish === 'cannot_host' ? 'selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="hostWish"
+                    value="cannot_host"
+                    checked={hostWish === 'cannot_host'}
+                    onChange={() => setHostWish('cannot_host')}
+                  />
                   <div>
                     <div className="label">❌ Ich kann nicht hosten</div>
                     <div className="desc">Ich möchte nur Gast sein</div>
@@ -131,7 +163,12 @@ export default function PublicRegisterPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary w-full" disabled={submitting} style={{ justifyContent: 'center' }}>
+            <button
+              type="submit"
+              className="btn-primary w-full"
+              disabled={submitting}
+              style={{ justifyContent: 'center' }}
+            >
               {submitting ? 'Anmelden...' : 'Als Gast anmelden'}
             </button>
           </form>

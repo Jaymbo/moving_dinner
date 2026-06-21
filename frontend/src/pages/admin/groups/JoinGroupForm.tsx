@@ -42,11 +42,15 @@ export default function JoinGroupForm({ onJoined, onMessage, onError }: JoinGrou
       <h3>Gruppe beitreten</h3>
       <div className="flex flex-wrap gap-2 mt-4">
         <input
-          type="text" value={code} onChange={e => setCode(e.target.value)}
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
           placeholder="Einladungscode eingeben"
           style={{ flex: 1, minWidth: 220 }}
         />
-        <button className="btn-primary" onClick={handleLookup}>Suchen</button>
+        <button className="btn-primary" onClick={handleLookup}>
+          Suchen
+        </button>
       </div>
       {joinGroup && (
         <div className="card mt-4" style={{ background: '#f0fdf4' }}>

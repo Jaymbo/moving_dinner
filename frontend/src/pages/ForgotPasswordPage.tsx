@@ -32,9 +32,8 @@ export default function ForgotPasswordPage() {
           <h1>🍽️ Moving Dinner</h1>
           <h2>E-Mail gesendet</h2>
           <Alert variant="success">
-            Falls ein Account mit der E-Mail <strong>{email}</strong> existiert,
-            hast du einen Link zum Zurücksetzen deines Passworts erhalten.
-            Bitte prüfe auch deinen Spam-Ordner.
+            Falls ein Account mit der E-Mail <strong>{email}</strong> existiert, hast du einen Link
+            zum Zurücksetzen deines Passworts erhalten. Bitte prüfe auch deinen Spam-Ordner.
           </Alert>
           <Link to="/login" className="login-footer" style={{ display: 'block' }}>
             Zurück zum Login
@@ -50,8 +49,8 @@ export default function ForgotPasswordPage() {
         <h1>🍽️ Moving Dinner</h1>
         <h2>Passwort vergessen?</h2>
         <p className="login-footer">
-          Gib deine E-Mail-Adresse ein und wir senden dir einen Link,
-          um dein Passwort zurückzusetzen.
+          Gib deine E-Mail-Adresse ein und wir senden dir einen Link, um dein Passwort
+          zurückzusetzen.
         </p>
         {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
@@ -59,7 +58,7 @@ export default function ForgotPasswordPage() {
             label="E-Mail"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="deine@email.de"
           />

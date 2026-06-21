@@ -12,7 +12,7 @@ export default function MyMeetingsPage() {
   const [myMeetings, setMyMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Creation state
   const [showCreate, setShowCreate] = useState(false);
   const [creatableGroups, setCreatableGroups] = useState<any[]>([]);
@@ -26,7 +26,10 @@ export default function MyMeetingsPage() {
     try {
       const g = await groups.list();
       const creatable = g.filter((group: any) => {
-        const role = group.role || (group.members?.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id)?.role);
+        const role =
+          group.role ||
+          group.members?.find((mem: any) => mem.userId === user?.id || mem.user?.id === user?.id)
+            ?.role;
         return group.meetingCreation === 'all' || role === 'admin';
       });
       setCreatableGroups(creatable);
@@ -49,10 +52,10 @@ export default function MyMeetingsPage() {
 
   const didLoadRef = useRef(false);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (didLoadRef.current) return;
     didLoadRef.current = true;
-    void loadMeetings(); 
+    void loadMeetings();
     void loadCreatableGroups();
   }, [loadMeetings, loadCreatableGroups]);
 
@@ -66,7 +69,10 @@ export default function MyMeetingsPage() {
     setCreating(true);
     setError('');
     try {
-      await meetings.create(newGroupId, { date: newDate, deadline: combineDateTime(newDeadlineDate, newDeadlineTime) });
+      await meetings.create(newGroupId, {
+        date: newDate,
+        deadline: combineDateTime(newDeadlineDate, newDeadlineTime),
+      });
       setShowCreate(false);
       setNewDate('');
       setNewDeadlineDate('');
@@ -81,7 +87,7 @@ export default function MyMeetingsPage() {
 
   async function handleResponse(meetingId: number, hostWish: string) {
     try {
-      const existing = myMeetings.find(m => m.id === meetingId);
+      const existing = myMeetings.find((m) => m.id === meetingId);
       if (existing?.hasResponded) {
         await responses.updateMine(meetingId, hostWish);
       } else {
@@ -103,11 +109,21 @@ export default function MyMeetingsPage() {
   }
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   }
 
   function formatDeadline(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   if (loading) return <div className="loading">Laden...</div>;
@@ -138,12 +154,13 @@ export default function MyMeetingsPage() {
               label="Gruppe"
               as="select"
               value={newGroupId || ''}
-              onChange={e => setNewGroupId(parseInt(e.target.value))}
+              onChange={(e) => setNewGroupId(parseInt(e.target.value))}
               required
             >
               {creatableGroups.map((g: any) => (
                 <option key={g.id} value={g.id}>
-                  {g.name}{g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}
+                  {g.name}
+                  {g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}
                 </option>
               ))}
             </FormField>
@@ -151,7 +168,7 @@ export default function MyMeetingsPage() {
               label="Datum"
               type="date"
               value={newDate}
-              onChange={e => setNewDate(e.target.value)}
+              onChange={(e) => setNewDate(e.target.value)}
               required
             />
             <div className="form-group">
@@ -161,7 +178,7 @@ export default function MyMeetingsPage() {
                   className="ui-input"
                   type="date"
                   value={newDeadlineDate}
-                  onChange={e => setNewDeadlineDate(e.target.value)}
+                  onChange={(e) => setNewDeadlineDate(e.target.value)}
                   required
                   aria-label="Anmeldeschluss Datum"
                 />
@@ -169,7 +186,7 @@ export default function MyMeetingsPage() {
                   className="ui-input"
                   type="time"
                   value={newDeadlineTime}
-                  onChange={e => setNewDeadlineTime(e.target.value)}
+                  onChange={(e) => setNewDeadlineTime(e.target.value)}
                   required
                   aria-label="Anmeldeschluss Uhrzeit"
                 />
@@ -203,33 +220,56 @@ export default function MyMeetingsPage() {
                 }
               />
               <p className="text-sm mb-2">Deadline: {formatDeadline(m.deadline)}</p>
-              <p className="text-sm mb-4">Anmeldungen: {m.totalResponses ?? m._count?.responses ?? m.responses?.length ?? 0}</p>
+              <p className="text-sm mb-4">
+                Anmeldungen: {m.totalResponses ?? m._count?.responses ?? m.responses?.length ?? 0}
+              </p>
 
               {!m.frozen && (
                 <div>
                   {m.hasResponded ? (
                     <div>
                       <p className="text-sm mb-2">
-                        Deine Anmeldung: <strong>{
-                          m.response?.hostWish === 'will_host' ? '🏠 Will hosten' :
-                          m.response?.hostWish === 'cannot_host' ? '❌ Kann nicht hosten' :
-                          '🤷 Egal'
-                        }</strong>
+                        Deine Anmeldung:{' '}
+                        <strong>
+                          {m.response?.hostWish === 'will_host'
+                            ? '🏠 Will hosten'
+                            : m.response?.hostWish === 'cannot_host'
+                              ? '❌ Kann nicht hosten'
+                              : '🤷 Egal'}
+                        </strong>
                       </p>
                       <div className="actions-stack">
-                        <Button size="sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</Button>
-                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</Button>
-                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</Button>
-                        <Button size="sm" variant="danger" onClick={() => handleWithdraw(m.id)}>Zurückziehen</Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'will_host')}>
+                          🏠 Will hosten
+                        </Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>
+                          🤷 Egal
+                        </Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>
+                          ❌ Kann nicht
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => handleWithdraw(m.id)}>
+                          Zurückziehen
+                        </Button>
                       </div>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm mb-2">Du hast dich noch nicht angemeldet:</p>
                       <div className="actions-stack">
-                        <Button size="sm" variant="primary" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</Button>
-                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</Button>
-                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => handleResponse(m.id, 'will_host')}
+                        >
+                          🏠 Will hosten
+                        </Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>
+                          🤷 Egal
+                        </Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>
+                          ❌ Kann nicht
+                        </Button>
                       </div>
                     </div>
                   )}

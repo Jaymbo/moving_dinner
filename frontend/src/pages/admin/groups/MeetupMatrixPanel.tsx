@@ -7,7 +7,10 @@ interface MeetupMatrixPanelProps {
 
 export default function MeetupMatrixPanel({ scores, matrix }: MeetupMatrixPanelProps) {
   return (
-    <div className="card" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
+    <div
+      className="card"
+      style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}
+    >
       <h4 style={{ marginTop: 0 }}>🤝 Treffen-Matrix</h4>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
@@ -24,16 +27,28 @@ export default function MeetupMatrixPanel({ scores, matrix }: MeetupMatrixPanelP
           <tbody>
             {scores.map((sRow: any) => (
               <tr key={sRow.userId}>
-                <th style={{ textAlign: 'left', minWidth: 60 }} title={sRow.user?.name || sRow.userName}>
+                <th
+                  style={{ textAlign: 'left', minWidth: 60 }}
+                  title={sRow.user?.name || sRow.userName}
+                >
                   {(sRow.user?.name || sRow.userName).charAt(0)}
                 </th>
                 {scores.map((sCol: any) => {
-                  const pair = matrix.find(m =>
-                    (m.userAId === sRow.userId && m.userBId === sCol.userId) ||
-                    (m.userAId === sCol.userId && m.userBId === sRow.userId)
+                  const pair = matrix.find(
+                    (m) =>
+                      (m.userAId === sRow.userId && m.userBId === sCol.userId) ||
+                      (m.userAId === sCol.userId && m.userBId === sRow.userId)
                   );
                   return (
-                    <td key={sCol.userId} style={{ textAlign: 'center', background: pair ? `rgba(124, 58, 237, ${Math.min(pair.count / 5, 1)})` : 'transparent' }}>
+                    <td
+                      key={sCol.userId}
+                      style={{
+                        textAlign: 'center',
+                        background: pair
+                          ? `rgba(124, 58, 237, ${Math.min(pair.count / 5, 1)})`
+                          : 'transparent',
+                      }}
+                    >
                       {pair?.count || 0}
                     </td>
                   );

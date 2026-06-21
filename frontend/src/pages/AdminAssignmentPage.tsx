@@ -17,10 +17,7 @@ export default function AdminAssignmentPage() {
     if (!meetingId) return;
     try {
       const id = parseInt(meetingId);
-      const [m, a] = await Promise.all([
-        meetings.get(id),
-        assignment.get(id),
-      ]);
+      const [m, a] = await Promise.all([meetings.get(id), assignment.get(id)]);
       setMeeting(m);
       setAssignmentData(a);
     } catch (err: any) {
@@ -58,17 +55,23 @@ export default function AdminAssignmentPage() {
     setSaving(true);
     setError('');
     try {
-      const assignments = Object.entries(assignmentData.hostGroups)
-        .flatMap(([, group]: [string, any]) => [
-          ...group.guests.map((g: any) => ({ userId: g.userId, assignedHost: parseInt(group.host?.id || '0') })),
-        ].filter((a: any) => a.assignedHost !== 0));
+      const assignments = Object.entries(assignmentData.hostGroups).flatMap(
+        ([, group]: [string, any]) =>
+          [
+            ...group.guests.map((g: any) => ({
+              userId: g.userId,
+              assignedHost: parseInt(group.host?.id || '0'),
+            })),
+          ].filter((a: any) => a.assignedHost !== 0)
+      );
 
       // Also include hosts pointing to themselves
       const hostAssignments = Object.entries(assignmentData.hostGroups)
         .map(([, group]: [string, any]) => ({
           userId: parseInt(group.host?.id || '0'),
           assignedHost: parseInt(group.host?.id || '0'),
-        })).filter((a: any) => a.userId !== 0);
+        }))
+        .filter((a: any) => a.userId !== 0);
 
       await assignment.manual(parseInt(meetingId), [...hostAssignments, ...assignments]);
       setMessage('Manuelle Zuweisung gespeichert!');
@@ -119,8 +122,12 @@ export default function AdminAssignmentPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-4 mb-4">
-        <button className="btn-sm" onClick={() => navigate('/groups')}>← Zurück</button>
-        <h1 className="page-title" style={{ marginBottom: 0 }}>Zuweisung – {formatDate(meeting.date)}</h1>
+        <button className="btn-sm" onClick={() => navigate('/groups')}>
+          ← Zurück
+        </button>
+        <h1 className="page-title" style={{ marginBottom: 0 }}>
+          Zuweisung – {formatDate(meeting.date)}
+        </h1>
         {meeting.frozen && <span className="badge badge-gray">Abgeschlossen</span>}
         {!meeting.frozen && <span className="badge badge-green">Offen</span>}
       </div>
@@ -131,9 +138,15 @@ export default function AdminAssignmentPage() {
       <div className="card mb-4">
         <h3>Anmeldungen ({responseList.length})</h3>
         <div className="flex flex-wrap gap-4 mt-2">
-          <span>🏠 Will hosten: <strong>{hostWishes['will_host'] || 0}</strong></span>
-          <span>🤷 Egal: <strong>{hostWishes['indifferent'] || 0}</strong></span>
-          <span>❌ Kann nicht: <strong>{hostWishes['cannot_host'] || 0}</strong></span>
+          <span>
+            🏠 Will hosten: <strong>{hostWishes['will_host'] || 0}</strong>
+          </span>
+          <span>
+            🤷 Egal: <strong>{hostWishes['indifferent'] || 0}</strong>
+          </span>
+          <span>
+            ❌ Kann nicht: <strong>{hostWishes['cannot_host'] || 0}</strong>
+          </span>
         </div>
       </div>
 
@@ -160,22 +173,33 @@ export default function AdminAssignmentPage() {
               ) : (
                 <div className="mt-2">
                   {group.guests.map((g: any) => (
-                    <div key={g.userId} className="assignment-guest flex items-center justify-between">
+                    <div
+                      key={g.userId}
+                      className="assignment-guest flex items-center justify-between"
+                    >
                       <span>
                         {g.user?.name || 'Unbekannt'}
-                        {g.user?.diet && <span className="text-sm text-muted"> ({g.user.diet})</span>}
+                        {g.user?.diet && (
+                          <span className="text-sm text-muted"> ({g.user.diet})</span>
+                        )}
                       </span>
-                      {!meeting.frozen && isAdmin && Object.keys(assignmentData.hostGroups).length > 1 && (
-                        <select
-                          value={hostId}
-                          onChange={e => handleMoveGuest(g.userId, parseInt(e.target.value))}
-                          style={{ width: 'auto' }}
-                        >
-                          {Object.entries(assignmentData.hostGroups).map(([hid, hg]: [string, any]) => (
-                            <option key={hid} value={hid}>{hg.host?.name}</option>
-                          ))}
-                        </select>
-                      )}
+                      {!meeting.frozen &&
+                        isAdmin &&
+                        Object.keys(assignmentData.hostGroups).length > 1 && (
+                          <select
+                            value={hostId}
+                            onChange={(e) => handleMoveGuest(g.userId, parseInt(e.target.value))}
+                            style={{ width: 'auto' }}
+                          >
+                            {Object.entries(assignmentData.hostGroups).map(
+                              ([hid, hg]: [string, any]) => (
+                                <option key={hid} value={hid}>
+                                  {hg.host?.name}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -187,7 +211,9 @@ export default function AdminAssignmentPage() {
             <div className="card" style={{ border: '2px solid var(--color-danger)' }}>
               <h4>⚠️ Nicht zugewiesen ({assignmentData.unassigned.length})</h4>
               {assignmentData.unassigned.map((r: any) => (
-                <p key={r.userId}>{r.user?.name} – {r.hostWish}</p>
+                <p key={r.userId}>
+                  {r.user?.name} – {r.hostWish}
+                </p>
               ))}
             </div>
           )}

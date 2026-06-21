@@ -75,12 +75,21 @@ export default function JoinGroupPage() {
               <div className="error-box">
                 Du musst angemeldet sein, um einer Gruppe beizutreten.
                 <div className="mt-2 flex gap-2">
-                  <button className="btn-primary btn-sm" onClick={() => navigate('/login')}>Anmelden</button>
-                  <button className="btn-sm" onClick={() => navigate('/register')}>Registrieren</button>
+                  <button className="btn-primary btn-sm" onClick={() => navigate('/login')}>
+                    Anmelden
+                  </button>
+                  <button className="btn-sm" onClick={() => navigate('/register')}>
+                    Registrieren
+                  </button>
                 </div>
               </div>
             ) : (
-              <button className="btn-primary w-full" onClick={handleJoin} disabled={joining} style={{ justifyContent: 'center' }}>
+              <button
+                className="btn-primary w-full"
+                onClick={handleJoin}
+                disabled={joining}
+                style={{ justifyContent: 'center' }}
+              >
                 {joining ? 'Beitreten...' : `„${groupInfo.name}" beitreten`}
               </button>
             )}

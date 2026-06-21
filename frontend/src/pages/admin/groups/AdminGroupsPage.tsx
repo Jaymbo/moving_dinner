@@ -22,7 +22,9 @@ export default function AdminGroupsPage() {
 
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
   function clearMessages() {
     setError('');
@@ -128,23 +130,17 @@ export default function AdminGroupsPage() {
       </header>
 
       {error && <div className="error-box">{error}</div>}
-      {message && <div className="success-box" onClick={() => setMessage('')}>{message}</div>}
+      {message && (
+        <div className="success-box" onClick={() => setMessage('')}>
+          {message}
+        </div>
+      )}
 
       {showCreate && (
-        <CreateGroupForm
-          onCreated={loadData}
-          onMessage={setMessage}
-          onError={setError}
-        />
+        <CreateGroupForm onCreated={loadData} onMessage={setMessage} onError={setError} />
       )}
 
-      {showJoin && (
-        <JoinGroupForm
-          onJoined={loadData}
-          onMessage={setMessage}
-          onError={setError}
-        />
-      )}
+      {showJoin && <JoinGroupForm onJoined={loadData} onMessage={setMessage} onError={setError} />}
 
       {myGroups.length === 0 ? (
         <div className="empty-state">

@@ -54,9 +54,7 @@ export default function ResetPasswordPage() {
         <div className="login-card">
           <h1>🍽️ Moving Dinner</h1>
           <h2>Ungültiger Link</h2>
-          <Alert variant="error">
-            Dieser Link zum Zurücksetzen des Passworts ist ungültig.
-          </Alert>
+          <Alert variant="error">Dieser Link zum Zurücksetzen des Passworts ist ungültig.</Alert>
           <Link to="/forgot-password" className="login-footer" style={{ display: 'block' }}>
             Neuen Link anfordern
           </Link>
@@ -87,16 +85,14 @@ export default function ResetPasswordPage() {
       <div className="login-card">
         <h1>🍽️ Moving Dinner</h1>
         <h2>Neues Passwort setzen</h2>
-        <p className="login-footer">
-          Gib dein neues Passwort ein.
-        </p>
+        <p className="login-footer">Gib dein neues Passwort ein.</p>
         {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
           <FormField
             label="Neues Passwort"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
             placeholder="Mindestens 6 Zeichen"
@@ -105,7 +101,7 @@ export default function ResetPasswordPage() {
             label="Passwort bestätigen"
             type="password"
             value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
             minLength={6}
             placeholder="Passwort wiederholen"

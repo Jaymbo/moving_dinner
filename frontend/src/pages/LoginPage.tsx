@@ -38,14 +38,14 @@ export default function LoginPage() {
             label="E-Mail"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           <FormField
             label="Passwort"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
           <Button type="submit" variant="primary" fullWidth loading={loading}>

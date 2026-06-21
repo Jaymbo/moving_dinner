@@ -53,7 +53,6 @@ export default function MeetupMatrixPage() {
     void loadData();
   }, [loadData]);
 
-
   function getUserName(s: ScoreItem): string {
     return s.user?.name || s.userName || `User ${s.userId}`;
   }
@@ -80,9 +79,7 @@ export default function MeetupMatrixPage() {
 
   function getPairCount(aId: number, bId: number): number {
     const pair = matrix.find(
-      (m) =>
-        (m.userAId === aId && m.userBId === bId) ||
-        (m.userAId === bId && m.userBId === aId)
+      (m) => (m.userAId === aId && m.userBId === bId) || (m.userAId === bId && m.userBId === aId)
     );
     return pair?.count ?? 0;
   }
@@ -116,7 +113,8 @@ export default function MeetupMatrixPage() {
 
       <div className="card mb-4">
         <p className="text-sm text-muted mb-4">
-          Filtere die X- und Y-Achse unabhängig voneinander. Kommagetrennte Begriffe werden als ODER verknüpft.
+          Filtere die X- und Y-Achse unabhängig voneinander. Kommagetrennte Begriffe werden als ODER
+          verknüpft.
         </p>
         <div className="grid grid-2 gap-4">
           <div className="form-group">

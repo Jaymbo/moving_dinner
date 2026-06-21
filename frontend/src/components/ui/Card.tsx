@@ -7,7 +7,11 @@ interface CardProps {
 }
 
 export function Card({ children, className = '', padding = 'default' }: CardProps) {
-  return <div className={`ui-card ${padding === 'none' ? 'ui-card-no-padding' : ''} ${className}`}>{children}</div>;
+  return (
+    <div className={`ui-card ${padding === 'none' ? 'ui-card-no-padding' : ''} ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 interface CardHeaderProps {
@@ -35,5 +39,9 @@ interface CardSectionProps {
 }
 
 export function CardSection({ children, className = '', borderTop = false }: CardSectionProps) {
-  return <div className={`ui-card-section ${borderTop ? 'ui-card-section-border' : ''} ${className}`}>{children}</div>;
+  return (
+    <div className={`ui-card-section ${borderTop ? 'ui-card-section-border' : ''} ${className}`}>
+      {children}
+    </div>
+  );
 }

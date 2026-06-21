@@ -119,12 +119,7 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader
-        title={
-          <>
-            Mein Profil{' '}
-            {isSuperAdmin && <Badge variant="purple">⭐ Super-Admin</Badge>}
-          </>
-        }
+        title={<>Mein Profil {isSuperAdmin && <Badge variant="purple">⭐ Super-Admin</Badge>}</>}
       />
 
       <Card className="profile-card">
@@ -137,27 +132,22 @@ export default function ProfilePage() {
             label="Name"
             type="text"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             required
           />
-          <FormField
-            label="E-Mail"
-            type="email"
-            value={user.email}
-            disabled
-          />
+          <FormField label="E-Mail" type="email" value={user.email} disabled />
           <FormField
             label="Adresse"
             type="text"
             value={address}
-            onChange={e => setAddress(e.target.value)}
+            onChange={(e) => setAddress(e.target.value)}
             placeholder="Straße, PLZ Stadt"
           />
           <FormField
             label="Maximale Gäste"
             type="number"
             value={maxGuests}
-            onChange={e => setMaxGuests(parseInt(e.target.value) || 0)}
+            onChange={(e) => setMaxGuests(parseInt(e.target.value) || 0)}
             min={0}
             max={20}
             hint="Wie viele Gäste kannst du aufnehmen?"
@@ -166,14 +156,14 @@ export default function ProfilePage() {
             label="Ernährungsbesonderheiten"
             type="text"
             value={diet}
-            onChange={e => setDiet(e.target.value)}
+            onChange={(e) => setDiet(e.target.value)}
             placeholder="z.B. vegetarisch, vegan, glutenfrei"
           />
           <FormField
             label="Notizen"
             as="textarea"
             value={notes}
-            onChange={e => setNotes(e.target.value)}
+            onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Sonstige Hinweise"
           />
@@ -192,7 +182,7 @@ export default function ProfilePage() {
             label="Aktuelles Passwort"
             type="password"
             value={currentPassword}
-            onChange={e => setCurrentPassword(e.target.value)}
+            onChange={(e) => setCurrentPassword(e.target.value)}
             required
             placeholder="Aktuelles Passwort"
           />
@@ -200,7 +190,7 @@ export default function ProfilePage() {
             label="Neues Passwort"
             type="password"
             value={newPassword}
-            onChange={e => setNewPassword(e.target.value)}
+            onChange={(e) => setNewPassword(e.target.value)}
             required
             minLength={6}
             placeholder="Mindestens 6 Zeichen"
@@ -209,7 +199,7 @@ export default function ProfilePage() {
             label="Neues Passwort bestätigen"
             type="password"
             value={confirmNewPassword}
-            onChange={e => setConfirmNewPassword(e.target.value)}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
             required
             minLength={6}
             placeholder="Passwort wiederholen"
@@ -226,8 +216,8 @@ export default function ProfilePage() {
           subtitle="Diese Aktion kann nicht rückgängig gemacht werden."
         />
         <p className="text-secondary text-sm mb-4">
-          Wenn du dein Profil löschst, werden alle deine Daten unwiderruflich entfernt.
-          Du wirst aus allen Gruppen entfernt und deine Antworten, Scores und Verlaufsdaten gelöscht.
+          Wenn du dein Profil löschst, werden alle deine Daten unwiderruflich entfernt. Du wirst aus
+          allen Gruppen entfernt und deine Antworten, Scores und Verlaufsdaten gelöscht.
         </p>
 
         {!showDeleteConfirm ? (
@@ -243,7 +233,7 @@ export default function ProfilePage() {
               type="text"
               label="Bestätigung"
               value={deleteConfirmText}
-              onChange={e => setDeleteConfirmText(e.target.value)}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder='Tippe "LÖSCHEN" zum Bestätigen'
             />
             <div className="card-actions">

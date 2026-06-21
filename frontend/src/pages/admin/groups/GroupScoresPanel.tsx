@@ -9,7 +9,13 @@ interface GroupScoresPanelProps {
   onError: (error: string) => void;
 }
 
-export default function GroupScoresPanel({ groupId, scores, onRefresh, onMessage, onError }: GroupScoresPanelProps) {
+export default function GroupScoresPanel({
+  groupId,
+  scores,
+  onRefresh,
+  onMessage,
+  onError,
+}: GroupScoresPanelProps) {
   async function handleRecalculate() {
     try {
       await groups.recalculate(groupId);
@@ -21,7 +27,10 @@ export default function GroupScoresPanel({ groupId, scores, onRefresh, onMessage
   }
 
   return (
-    <div className="card" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
+    <div
+      className="card"
+      style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}
+    >
       <h4 style={{ marginTop: 0 }}>📊 Gruppen-Scores</h4>
 
       {/* Desktop: Tabelle */}
@@ -40,7 +49,9 @@ export default function GroupScoresPanel({ groupId, scores, onRefresh, onMessage
             {scores.map((s: any) => (
               <tr key={s.userId}>
                 <td style={{ textAlign: 'left' }}>{s.user?.name || s.userName}</td>
-                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{Number(s.score).toFixed(2)}</td>
+                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                  {Number(s.score).toFixed(2)}
+                </td>
                 <td style={{ textAlign: 'center' }}>{s.participations}</td>
                 <td style={{ textAlign: 'center' }}>{s.hostings}</td>
                 <td style={{ textAlign: 'center' }}>{s.hostedGuests}</td>

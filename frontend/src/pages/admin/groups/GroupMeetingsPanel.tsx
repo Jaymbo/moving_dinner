@@ -9,7 +9,12 @@ interface GroupMeetingsPanelProps {
   onError: (error: string) => void;
 }
 
-export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onError }: GroupMeetingsPanelProps) {
+export default function GroupMeetingsPanel({
+  groupId,
+  isAdmin,
+  onMessage,
+  onError,
+}: GroupMeetingsPanelProps) {
   const [groupMeetings, setGroupMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +50,12 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
   }
 
   async function handleFreeze(meetingId: number) {
-    if (!confirm('Treffen wirklich abschließen? Dadurch werden die Zuweisungen finalisiert und E-Mails versendet.')) return;
+    if (
+      !confirm(
+        'Treffen wirklich abschließen? Dadurch werden die Zuweisungen finalisiert und E-Mails versendet.'
+      )
+    )
+      return;
     try {
       await admin.freeze(meetingId);
       onMessage('Treffen abgeschlossen');
@@ -78,13 +88,22 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
   }
 
   function formatDeadline(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   if (loading) return <p className="text-sm text-muted">Lade Treffen...</p>;
 
   return (
-    <div className="card mt-4" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
+    <div
+      className="card mt-4"
+      style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}
+    >
       <h4 style={{ marginTop: 0 }}>📅 Treffen ({groupMeetings.length})</h4>
       {groupMeetings.length === 0 ? (
         <p className="text-sm text-muted">Noch keine Treffen in dieser Gruppe.</p>
@@ -117,13 +136,29 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
                     <td style={{ textAlign: 'center' }}>{m._count?.responses ?? 0}</td>
                     <td>
                       <div className="card-actions">
-                        <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>Zuweisung</Link>
+                        <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>
+                          Zuweisung
+                        </Link>
                         {!m.frozen && isAdmin && (
                           <>
-                            <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>RSVP</button>
-                            <button className="btn-sm" onClick={() => handleRemind(m.id)}>Erinnern</button>
-                            <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>Abschließen</button>
-                            <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️</button>
+                            <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>
+                              RSVP
+                            </button>
+                            <button className="btn-sm" onClick={() => handleRemind(m.id)}>
+                              Erinnern
+                            </button>
+                            <button
+                              className="btn-sm btn-danger"
+                              onClick={() => handleFreeze(m.id)}
+                            >
+                              Abschließen
+                            </button>
+                            <button
+                              className="btn-sm btn-danger"
+                              onClick={() => handleDelete(m.id)}
+                            >
+                              🗑️
+                            </button>
                           </>
                         )}
                       </div>
@@ -141,7 +176,9 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
                 <div className="ui-mobile-card-row">
                   <div className="ui-mobile-card-main">
                     <span className="ui-mobile-card-value">{formatDate(m.date)}</span>
-                    <span className="ui-mobile-card-label">Deadline: {formatDeadline(m.deadline)}</span>
+                    <span className="ui-mobile-card-label">
+                      Deadline: {formatDeadline(m.deadline)}
+                    </span>
                   </div>
                   {m.frozen ? (
                     <span className="badge badge-gray">Abgeschlossen</span>
@@ -154,13 +191,23 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
                   <span className="ui-mobile-card-value">{m._count?.responses ?? 0}</span>
                 </div>
                 <div className="ui-mobile-card-actions">
-                  <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>Zuweisung</Link>
+                  <Link className="btn-sm" to={`/groups/${groupId}/assignment/${m.id}`}>
+                    Zuweisung
+                  </Link>
                   {!m.frozen && isAdmin && (
                     <>
-                      <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>RSVP versenden</button>
-                      <button className="btn-sm" onClick={() => handleRemind(m.id)}>Erinnern</button>
-                      <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>Abschließen</button>
-                      <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>🗑️ Löschen</button>
+                      <button className="btn-sm" onClick={() => handleSendRsvp(m.id)}>
+                        RSVP versenden
+                      </button>
+                      <button className="btn-sm" onClick={() => handleRemind(m.id)}>
+                        Erinnern
+                      </button>
+                      <button className="btn-sm btn-danger" onClick={() => handleFreeze(m.id)}>
+                        Abschließen
+                      </button>
+                      <button className="btn-sm btn-danger" onClick={() => handleDelete(m.id)}>
+                        🗑️ Löschen
+                      </button>
                     </>
                   )}
                 </div>

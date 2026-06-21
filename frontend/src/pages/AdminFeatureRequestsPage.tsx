@@ -60,7 +60,13 @@ export default function AdminFeatureRequestsPage() {
   }
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   const statusColors: Record<string, string> = {
@@ -86,19 +92,29 @@ export default function AdminFeatureRequestsPage() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}
+        >
           <option value="">Alle Status</option>
           <option value="open">Offen</option>
           <option value="in_progress">In Bearbeitung</option>
           <option value="done">Erledigt</option>
           <option value="rejected">Abgelehnt</option>
         </select>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}
+        >
           <option value="">Alle Typen</option>
           <option value="feature">💡 Feature</option>
           <option value="bug">🐛 Bug</option>
         </select>
-        <span className="text-sm text-muted" style={{ lineHeight: '36px' }}>{requests.length} Requests</span>
+        <span className="text-sm text-muted" style={{ lineHeight: '36px' }}>
+          {requests.length} Requests
+        </span>
       </div>
 
       {requests.length === 0 ? (
@@ -114,18 +130,23 @@ export default function AdminFeatureRequestsPage() {
                   <span style={{ fontSize: 20 }}>{r.type === 'bug' ? '🐛' : '💡'}</span>
                   <h3 style={{ margin: 0, fontSize: 16 }}>{r.title}</h3>
                 </div>
-                <button className="btn-sm btn-danger" onClick={() => handleDelete(r.id)}>🗑️</button>
+                <button className="btn-sm btn-danger" onClick={() => handleDelete(r.id)}>
+                  🗑️
+                </button>
               </div>
-              <p style={{ fontSize: 14, color: '#6b7280', margin: '8px 0', lineHeight: 1.5 }}>{r.description}</p>
+              <p style={{ fontSize: 14, color: '#6b7280', margin: '8px 0', lineHeight: 1.5 }}>
+                {r.description}
+              </p>
               <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>
-                Von {r.user?.name || 'Unbekannt'} ({r.user?.email || ''}) · {formatDate(r.createdAt)}
+                Von {r.user?.name || 'Unbekannt'} ({r.user?.email || ''}) ·{' '}
+                {formatDate(r.createdAt)}
               </div>
               <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap' }}>
                 <div className="flex gap-1 items-center">
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Status:</span>
                   <select
                     value={r.status}
-                    onChange={e => handleUpdateStatus(r.id, e.target.value)}
+                    onChange={(e) => handleUpdateStatus(r.id, e.target.value)}
                     style={{
                       padding: '2px 8px',
                       borderRadius: 12,
@@ -144,10 +165,12 @@ export default function AdminFeatureRequestsPage() {
                   </select>
                 </div>
                 <div className="flex gap-1 items-center">
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Priorität:</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
+                    Priorität:
+                  </span>
                   <select
                     value={r.priority}
-                    onChange={e => handleUpdatePriority(r.id, e.target.value)}
+                    onChange={(e) => handleUpdatePriority(r.id, e.target.value)}
                     style={{
                       padding: '2px 8px',
                       borderRadius: 12,

@@ -18,7 +18,9 @@ export default function AdminUsersPage() {
   const [togglingSuperAdmin, setTogglingSuperAdmin] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   async function loadUsers() {
     try {
@@ -55,8 +57,13 @@ export default function AdminUsersPage() {
     const targetUser = userList.find((u: any) => u.id === id);
     const action = currentValue ? 'Super-Admin Status entfernen' : 'Zum Super-Admin ernennen';
     const userName = targetUser?.name || 'diesen Benutzer';
-    if (!confirm(`${action}: ${userName}?\n\n${!currentValue ? 'Dieser Benutzer erhält volle Admin-Rechte inkl. Zugriff auf alle Admin-Funktionen und kann andere Super-Admins verwalten.' : 'Dieser Benutzer verliert alle Super-Admin-Rechte.'}`)) return;
-    
+    if (
+      !confirm(
+        `${action}: ${userName}?\n\n${!currentValue ? 'Dieser Benutzer erhält volle Admin-Rechte inkl. Zugriff auf alle Admin-Funktionen und kann andere Super-Admins verwalten.' : 'Dieser Benutzer verliert alle Super-Admin-Rechte.'}`
+      )
+    )
+      return;
+
     setTogglingSuperAdmin(id);
     setError('');
     setSuccess('');
@@ -64,7 +71,9 @@ export default function AdminUsersPage() {
       await users.toggleSuperAdmin(id, !currentValue);
       await loadUsers();
       await refreshUser();
-      setSuccess(`${userName} wurde ${!currentValue ? 'zum Super-Admin ernannt' : 'als Super-Admin entfernt'}.`);
+      setSuccess(
+        `${userName} wurde ${!currentValue ? 'zum Super-Admin ernannt' : 'als Super-Admin entfernt'}.`
+      );
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -74,7 +83,13 @@ export default function AdminUsersPage() {
 
   function startEdit(u: any) {
     setEditingId(u.id);
-    setEditData({ name: u.name, address: u.address || '', maxGuests: u.maxGuests, diet: u.diet || '', notes: u.notes || '' });
+    setEditData({
+      name: u.name,
+      address: u.address || '',
+      maxGuests: u.maxGuests,
+      diet: u.diet || '',
+      notes: u.notes || '',
+    });
   }
 
   function getUserTypeBadge(u: any) {
@@ -98,10 +113,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Benutzer verwalten"
-        subtitle={`${filteredUsers.length} Benutzer`}
-      />
+      <PageHeader title="Benutzer verwalten" subtitle={`${filteredUsers.length} Benutzer`} />
       {error && <Alert variant="error">{error}</Alert>}
       {success && <Alert variant="success">{success}</Alert>}
 
@@ -111,7 +123,7 @@ export default function AdminUsersPage() {
           type="text"
           placeholder="Name, E-Mail, Adresse, Diät..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
         />
         {search && (
           <span className="text-sm text-muted">
@@ -140,23 +152,56 @@ export default function AdminUsersPage() {
                 {editingId === u.id ? (
                   <>
                     <td>{u.id}</td>
-                    <td><input className="ui-input" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></td>
+                    <td>
+                      <input
+                        className="ui-input"
+                        value={editData.name}
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                      />
+                    </td>
                     <td>{u.email}</td>
-                    <td><input className="ui-input" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} /></td>
-                    <td><input className="ui-input" type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} /></td>
-                    <td><input className="ui-input" value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} /></td>
+                    <td>
+                      <input
+                        className="ui-input"
+                        value={editData.address}
+                        onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="ui-input"
+                        type="number"
+                        value={editData.maxGuests}
+                        onChange={(e) =>
+                          setEditData({ ...editData, maxGuests: parseInt(e.target.value) || 0 })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="ui-input"
+                        value={editData.diet}
+                        onChange={(e) => setEditData({ ...editData, diet: e.target.value })}
+                      />
+                    </td>
                     <td>{getUserTypeBadge(u)}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="primary" onClick={() => handleSave(u.id)}>✓</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>✕</Button>
+                        <Button size="sm" variant="primary" onClick={() => handleSave(u.id)}>
+                          ✓
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                          ✕
+                        </Button>
                       </div>
                     </td>
                   </>
                 ) : (
                   <>
                     <td>{u.id}</td>
-                    <td>{u.name} {u.id === user?.id && <span className="admin-you-badge">(du)</span>}</td>
+                    <td>
+                      {u.name} {u.id === user?.id && <span className="admin-you-badge">(du)</span>}
+                    </td>
                     <td className="text-sm">{u.email}</td>
                     <td className="text-sm">{u.address || '–'}</td>
                     <td>{u.maxGuests}</td>
@@ -164,9 +209,13 @@ export default function AdminUsersPage() {
                     <td>{getUserTypeBadge(u)}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => startEdit(u)}>✏️</Button>
+                        <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
+                          ✏️
+                        </Button>
                         {u.id !== user?.id && (
-                          <Button size="sm" variant="danger" onClick={() => handleDelete(u.id)}>🗑️</Button>
+                          <Button size="sm" variant="danger" onClick={() => handleDelete(u.id)}>
+                            🗑️
+                          </Button>
                         )}
                         {isSuperAdmin && u.id !== user?.id && (
                           <Button
@@ -174,7 +223,9 @@ export default function AdminUsersPage() {
                             variant={u.isSuperAdmin ? 'primary' : 'outline'}
                             onClick={() => handleToggleSuperAdmin(u.id, u.isSuperAdmin)}
                             disabled={togglingSuperAdmin === u.id}
-                            title={u.isSuperAdmin ? 'Super-Admin entfernen' : 'Zum Super-Admin machen'}
+                            title={
+                              u.isSuperAdmin ? 'Super-Admin entfernen' : 'Zum Super-Admin machen'
+                            }
                           >
                             {togglingSuperAdmin === u.id ? '...' : '⭐'}
                           </Button>

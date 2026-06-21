@@ -29,7 +29,22 @@ interface GroupCardProps {
 
 export default function GroupCard(props: GroupCardProps) {
   const { user } = useAuth();
-  const { group, selected, members, invitations, scores, onToggle, onEdit, onDelete, onLeave, onRefresh, onMembersChange, onInvitationsChange, onMessage, onError } = props;
+  const {
+    group,
+    selected,
+    members,
+    invitations,
+    scores,
+    onToggle,
+    onEdit,
+    onDelete,
+    onLeave,
+    onRefresh,
+    onMembersChange,
+    onInvitationsChange,
+    onMessage,
+    onError,
+  } = props;
 
   const myRole = getMyRole(group, user?.id);
   const isAdmin = myRole === 'admin';
@@ -69,14 +84,25 @@ export default function GroupCard(props: GroupCardProps) {
       </div>
 
       <p className="text-sm mb-2">
-        📋 Code: <strong>{group.inviteCode}</strong> · 👥 {group._count?.members || group.members?.length || 0} Mitglieder · 📅 {group._count?.meetings || 0} Treffen
+        📋 Code: <strong>{group.inviteCode}</strong> · 👥{' '}
+        {group._count?.members || group.members?.length || 0} Mitglieder · 📅{' '}
+        {group._count?.meetings || 0} Treffen
       </p>
       <p className="text-sm mb-2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        🔗 Link: <a href={getJoinLink(group.inviteCode)} target="_blank" rel="noopener noreferrer" style={{ wordBreak: 'break-all' }}>{getJoinLink(group.inviteCode)}</a>
+        🔗 Link:{' '}
+        <a
+          href={getJoinLink(group.inviteCode)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ wordBreak: 'break-all' }}
+        >
+          {getJoinLink(group.inviteCode)}
+        </a>
         <CopyButton text={getJoinLink(group.inviteCode)} label="📋" />
       </p>
       <p className="text-sm mb-2">
-        🎯 Treffen erstellen: <strong>{group.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
+        🎯 Treffen erstellen:{' '}
+        <strong>{group.meetingCreation === 'all' ? 'Alle Mitglieder' : 'Nur Admins'}</strong>
       </p>
 
       <div className="card-actions">
@@ -87,17 +113,26 @@ export default function GroupCard(props: GroupCardProps) {
         )}
         {isAdmin && (
           <>
-            <button className="btn-sm" onClick={() => onEdit(group)}>✏️ Bearbeiten</button>
-            <button className="btn-sm btn-danger" onClick={() => onDelete(group.id)}>🗑️</button>
+            <button className="btn-sm" onClick={() => onEdit(group)}>
+              ✏️ Bearbeiten
+            </button>
+            <button className="btn-sm btn-danger" onClick={() => onDelete(group.id)}>
+              🗑️
+            </button>
           </>
         )}
         {isMember && (
-          <button className="btn-sm btn-danger" onClick={() => onLeave(group.id)}>🚪 Verlassen</button>
+          <button className="btn-sm btn-danger" onClick={() => onLeave(group.id)}>
+            🚪 Verlassen
+          </button>
         )}
       </div>
 
       {selected && (
-        <div className="mt-4" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
+        <div
+          className="mt-4"
+          style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}
+        >
           <GroupMembersTable
             groupId={group.id}
             members={members}
@@ -131,7 +166,10 @@ export default function GroupCard(props: GroupCardProps) {
                   onMessage={onMessage}
                   onError={onError}
                 />
-                <div className="card" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
+                <div
+                  className="card"
+                  style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}
+                >
                   <h4 style={{ marginTop: 0 }}>🤝 Treffen-Matrix</h4>
                   <p className="text-sm text-muted">
                     Zeigt, wie oft zwei Personen bereits gemeinsam zu Abend gegessen sind.

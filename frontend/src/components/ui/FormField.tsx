@@ -1,4 +1,9 @@
-import React, { useId, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import React, {
+  useId,
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react';
 
 type InputLike =
   | ({ as?: 'input' } & InputHTMLAttributes<HTMLInputElement>)
@@ -12,10 +17,18 @@ interface BaseFormFieldProps {
   error?: React.ReactNode;
 }
 
-export default function FormField({ label, id, hint, error, ...inputProps }: BaseFormFieldProps & InputLike) {
+export default function FormField({
+  label,
+  id,
+  hint,
+  error,
+  ...inputProps
+}: BaseFormFieldProps & InputLike) {
   const generatedId = useId();
   const inputId = id || generatedId;
-  const describedBy = [hint ? `${inputId}-hint` : '', error ? `${inputId}-error` : ''].filter(Boolean).join(' ') || undefined;
+  const describedBy =
+    [hint ? `${inputId}-hint` : '', error ? `${inputId}-error` : ''].filter(Boolean).join(' ') ||
+    undefined;
 
   const renderInput = () => {
     const baseProps = {
@@ -33,16 +46,28 @@ export default function FormField({ label, id, hint, error, ...inputProps }: Bas
       const { as: _as, ...rest } = inputProps;
       return <textarea {...baseProps} {...rest} />;
     }
-    const { as: _as, ...rest } = inputProps as { as?: 'input' } & InputHTMLAttributes<HTMLInputElement>;
+    const { as: _as, ...rest } = inputProps as {
+      as?: 'input';
+    } & InputHTMLAttributes<HTMLInputElement>;
     return <input {...baseProps} {...rest} />;
   };
 
   return (
     <div className="ui-form-field">
-      <label htmlFor={inputId} className="ui-label">{label}</label>
+      <label htmlFor={inputId} className="ui-label">
+        {label}
+      </label>
       {renderInput()}
-      {hint && !error ? <span id={`${inputId}-hint`} className="ui-field-hint">{hint}</span> : null}
-      {error ? <span id={`${inputId}-error`} className="ui-field-error">{error}</span> : null}
+      {hint && !error ? (
+        <span id={`${inputId}-hint`} className="ui-field-hint">
+          {hint}
+        </span>
+      ) : null}
+      {error ? (
+        <span id={`${inputId}-error`} className="ui-field-error">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }

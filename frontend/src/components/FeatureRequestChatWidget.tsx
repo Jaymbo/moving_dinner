@@ -61,7 +61,13 @@ export default function FeatureRequestChatWidget() {
   }
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   function statusBadge(status: string) {
@@ -78,15 +84,17 @@ export default function FeatureRequestChatWidget() {
       rejected: 'Abgelehnt',
     };
     return (
-      <span style={{
-        display: 'inline-block',
-        padding: '2px 8px',
-        borderRadius: 12,
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#fff',
-        background: colors[status] || '#6b7280',
-      }}>
+      <span
+        style={{
+          display: 'inline-block',
+          padding: '2px 8px',
+          borderRadius: 12,
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#fff',
+          background: colors[status] || '#6b7280',
+        }}
+      >
         {labels[status] || status}
       </span>
     );
@@ -104,15 +112,17 @@ export default function FeatureRequestChatWidget() {
       high: 'Hoch',
     };
     return (
-      <span style={{
-        display: 'inline-block',
-        padding: '2px 8px',
-        borderRadius: 12,
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#fff',
-        background: colors[priority] || '#6b7280',
-      }}>
+      <span
+        style={{
+          display: 'inline-block',
+          padding: '2px 8px',
+          borderRadius: 12,
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#fff',
+          background: colors[priority] || '#6b7280',
+        }}
+      >
         {labels[priority] || priority}
       </span>
     );
@@ -168,16 +178,18 @@ export default function FeatureRequestChatWidget() {
           }}
         >
           {/* Header */}
-          <div style={{
-            padding: '12px 16px',
-            background: '#3b82f6',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 15,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              background: '#3b82f6',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 15,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             💬 Feedback & Requests
           </div>
 
@@ -215,13 +227,21 @@ export default function FeatureRequestChatWidget() {
 
           {/* Content */}
           <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-            {error && <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 8 }}>{error}</div>}
-            {success && <div style={{ color: '#10b981', fontSize: 13, marginBottom: 8 }}>{success}</div>}
+            {error && (
+              <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 8 }}>{error}</div>
+            )}
+            {success && (
+              <div style={{ color: '#10b981', fontSize: 13, marginBottom: 8 }}>{success}</div>
+            )}
 
             {tab === 'new' ? (
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Art</label>
+                  <label
+                    style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+                  >
+                    Art
+                  </label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       type="button"
@@ -259,11 +279,15 @@ export default function FeatureRequestChatWidget() {
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Titel</label>
+                  <label
+                    style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+                  >
+                    Titel
+                  </label>
                   <input
                     type="text"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    onChange={(e) => setTitle(e.target.value)}
                     placeholder="Kurze Zusammenfassung"
                     required
                     maxLength={200}
@@ -279,10 +303,14 @@ export default function FeatureRequestChatWidget() {
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Beschreibung</label>
+                  <label
+                    style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+                  >
+                    Beschreibung
+                  </label>
                   <textarea
                     value={description}
-                    onChange={e => setDescription(e.target.value)}
+                    onChange={(e) => setDescription(e.target.value)}
                     placeholder="Beschreibe dein Problem oder deine Idee..."
                     required
                     rows={4}
@@ -321,7 +349,9 @@ export default function FeatureRequestChatWidget() {
                 {loadingRequests ? (
                   <p style={{ color: '#6b7280', fontSize: 13, textAlign: 'center' }}>Laden...</p>
                 ) : myRequests.length === 0 ? (
-                  <p style={{ color: '#6b7280', fontSize: 13, textAlign: 'center' }}>Noch keine Requests gesendet.</p>
+                  <p style={{ color: '#6b7280', fontSize: 13, textAlign: 'center' }}>
+                    Noch keine Requests gesendet.
+                  </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {myRequests.map((r: any) => (
@@ -334,17 +364,30 @@ export default function FeatureRequestChatWidget() {
                           background: '#f9fafb',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}
+                        >
                           <span style={{ fontSize: 16 }}>{r.type === 'bug' ? '🐛' : '💡'}</span>
                           <strong style={{ fontSize: 13, flex: 1 }}>{r.title}</strong>
                         </div>
-                        <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0', lineHeight: 1.4 }}>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: '#6b7280',
+                            margin: '4px 0',
+                            lineHeight: 1.4,
+                          }}
+                        >
                           {r.description}
                         </p>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}>
+                        <div
+                          style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}
+                        >
                           {statusBadge(r.status)}
                           {priorityBadge(r.priority)}
-                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{formatDate(r.createdAt)}</span>
+                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>
+                            {formatDate(r.createdAt)}
+                          </span>
                         </div>
                       </div>
                     ))}

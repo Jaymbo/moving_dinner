@@ -45,9 +45,7 @@ function Navbar() {
     { to: '/groups', label: 'Gruppen' },
     ...(isSuperAdmin ? [{ to: '/admin/users', label: 'Admin' }] : []),
   ];
-  const rightLinks = [
-    { to: '/profile', label: 'Profil' },
-  ];
+  const rightLinks = [{ to: '/profile', label: 'Profil' }];
 
   return (
     <nav className="navbar">
@@ -92,16 +90,19 @@ function Navbar() {
                 key={link.to}
                 to={link.to}
                 end={link.to === '/profile'}
-                className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
                 onClick={() => setMenuOpen(false)}
               >
                 {link.label}
               </NavLink>
             ))}
             <span className="nav-user-name text-sm text-muted">
-              Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}
+              Hallo, {user.name}
+              {isSuperAdmin ? ' ⭐' : ''}
             </span>
-            <button className="btn-sm nav-logout" onClick={logout}>Abmelden</button>
+            <button className="btn-sm nav-logout" onClick={logout}>
+              Abmelden
+            </button>
           </div>
         </div>
       </div>
@@ -127,12 +128,54 @@ export default function App() {
           <Route path="/rsvp/:token" element={<RsvpPage />} />
           <Route path="/join/:code" element={<JoinGroupPage />} />
           <Route path="/public/register/:meetingId" element={<PublicRegisterPage />} />
-          <Route path="/" element={<ProtectedRoute><MyMeetingsPage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/groups" element={<ProtectedRoute><AdminGroupsPage /></ProtectedRoute>} />
-          <Route path="/groups/:groupId/matrix" element={<ProtectedRoute><MeetupMatrixPage /></ProtectedRoute>} />
-          <Route path="/groups/:groupId/assignment/:meetingId" element={<ProtectedRoute><AdminAssignmentPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MyMeetingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/groups"
+            element={
+              <ProtectedRoute>
+                <AdminGroupsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/groups/:groupId/matrix"
+            element={
+              <ProtectedRoute>
+                <MeetupMatrixPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/groups/:groupId/assignment/:meetingId"
+            element={
+              <ProtectedRoute>
+                <AdminAssignmentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <SuperAdminRoute>
+                <AdminLayout />
+              </SuperAdminRoute>
+            }
+          >
             <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />

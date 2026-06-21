@@ -27,6 +27,12 @@ export function MobileCardRow({ label, value, action }: MobileCardRowProps) {
   );
 }
 
-export function MobileCardActions({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function MobileCardActions({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return <div className={`ui-mobile-card-actions ${className}`}>{children}</div>;
 }

@@ -45,21 +45,21 @@ export default function RegisterPage() {
             label="Name"
             type="text"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             required
           />
           <FormField
             label="E-Mail"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           <FormField
             label="Passwort"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
             hint="Mindestens 6 Zeichen"
@@ -68,14 +68,14 @@ export default function RegisterPage() {
             label="Wohnort / Adresse"
             type="text"
             value={address}
-            onChange={e => setAddress(e.target.value)}
+            onChange={(e) => setAddress(e.target.value)}
           />
           <FormField
             label="Max. Gäste, die du aufnehmen kannst"
             type="number"
             min={0}
             value={maxGuests}
-            onChange={e => setMaxGuests(parseInt(e.target.value, 10) || 0)}
+            onChange={(e) => setMaxGuests(parseInt(e.target.value, 10) || 0)}
             required
           />
           <Button type="submit" variant="primary" fullWidth loading={loading}>
