@@ -25,6 +25,7 @@ BACKUP_DIR="${SCRIPT_DIR}/backups"
 LOG_DIR="${SCRIPT_DIR}/logs"
 CONFIG_FILE="${SCRIPT_DIR}/backup.config"
 RETENTION_DAYS=14
+LOG_RETENTION_DAYS=30
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_NAME="backup-${TIMESTAMP}.sql.gz"
 BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
@@ -166,6 +167,10 @@ run_backup() {
     # Rotate old local backups
     log_info "Rotiere lokale Backups (behalte letzte ${RETENTION_DAYS} Tage)..."
     find "${BACKUP_DIR}" -type f -name 'backup-*.sql.gz' -mtime +${RETENTION_DAYS} -delete || true
+
+    # Rotate old per-backup logs
+    log_info "Rotiere Backup-Logs (behalte letzte ${LOG_RETENTION_DAYS} Tage)..."
+    find "${LOG_DIR}" -type f -name 'backup-*.log' -mtime +${LOG_RETENTION_DAYS} -delete || true
 
     local backup_count
     backup_count=$(find "${BACKUP_DIR}" -type f -name 'backup-*.sql.gz' | wc -l)

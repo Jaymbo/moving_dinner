@@ -10,6 +10,9 @@
 # Wie viele Tage Backups lokal im Ordner ./backups aufbewahrt werden sollen.
 # RETENTION_DAYS=14
 
+# Wie viele Tage die einzelnen Backup-Logs in ./logs aufbewahrt werden sollen.
+# LOG_RETENTION_DAYS=30
+
 # -----------------------------------------------------------------------------
 # Optional: Remote-Backup via rsync / SSH
 # -----------------------------------------------------------------------------
