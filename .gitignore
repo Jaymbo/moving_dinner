@@ -38,3 +38,15 @@ coverage
 
 # Continue.dev local state
 .continue
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# Docker
+.docker
+
+# Temporary files
+tmp
+temp
+*.bak
