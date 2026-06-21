@@ -95,106 +95,128 @@ log_info "Erstelle .env Datei für Production..."
 
 if [ -f ".env" ]; then
     log_warning ".env Datei existiert bereits!"
+    echo ""
+    echo "  Aktuelle Konfiguration:"
+    if grep -q "BASE_URL" .env; then
+        echo "    BASE_URL: $(grep BASE_URL .env | cut -d'=' -f2)"
+    fi
+    if grep -q "SMTP_HOST" .env; then
+        echo "    SMTP_HOST: $(grep SMTP_HOST .env | cut -d'=' -f2)"
+    fi
+    echo ""
     read -p "Möchtest du sie überschreiben? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Überspringe .env Erstellung"
+        log_info "Überspringe .env Erstellung - verwende existierende Konfiguration"
+        # Load existing values
+        source .env
+        DOMAIN=$(echo "${BASE_URL}" | sed 's|https://||')
+        SKIP_ENV_CREATION=true
     else
         mv .env .env.backup.$(date +%Y%m%d-%H%M%S)
         log_success "Alte .env gesichert"
+        SKIP_ENV_CREATION=false
     fi
+else
+    SKIP_ENV_CREATION=false
 fi
 
-# Generate JWT Secret
-log_info "Generiere sicheres JWT Secret..."
-JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32)
+# Generate JWT Secret (only if not skipping)
+if [ "$SKIP_ENV_CREATION" = false ]; then
+    log_info "Generiere sicheres JWT Secret..."
+    JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32)
 
-# Collect user input
-echo ""
-echo "=========================================="
-echo "  Production Konfiguration"
-echo "=========================================="
-echo ""
+    # Collect user input
+    echo ""
+    echo "=========================================="
+    echo "  Production Konfiguration"
+    echo "=========================================="
+    echo ""
 
-# Domain
-read -p "Deine Domain (z.B. moving-dinner.example.com): " DOMAIN
-if [ -z "$DOMAIN" ]; then
-    log_error "Domain ist erforderlich!"
-    exit 1
-fi
-BASE_URL="https://${DOMAIN}"
-
-# Email Provider
-echo ""
-log_info "Wähle Email Provider:"
-echo "  1) Resend (100 Emails/Monat gratis, einfach)"
-echo "  2) Brevo (300 Emails/Tag gratis, EU-Server)"
-echo "  3) SendGrid (100 Emails/Tag gratis)"
-echo "  4) Anderer SMTP Provider"
-echo "  5) Keine Emails (nur Testing)"
-read -p "Auswahl (1-5): " EMAIL_CHOICE
-
-case $EMAIL_CHOICE in
-    1)
-        SMTP_HOST="smtp.resend.com"
-        SMTP_PORT="587"
-        SMTP_SECURE="false"
-        SMTP_USER="resend"
-        read -p "Resend API Key (beginnt mit re_): " SMTP_PASS
-        read -p "Absender E-Mail (z.B. noreply@${DOMAIN}): " SMTP_FROM
-        ;;
-    2)
-        SMTP_HOST="smtp-relay.brevo.com"
-        SMTP_PORT="587"
-        SMTP_SECURE="false"
-        read -p "Brevo SMTP Login: " SMTP_USER
-        read -p "Brevo SMTP Password: " SMTP_PASS
-        read -p "Absender E-Mail: " SMTP_FROM
-        ;;
-    3)
-        SMTP_HOST="smtp.sendgrid.net"
-        SMTP_PORT="587"
-        SMTP_SECURE="false"
-        SMTP_USER="apikey"
-        read -p "SendGrid API Key: " SMTP_PASS
-        read -p "Absender E-Mail: " SMTP_FROM
-        ;;
-    4)
-        read -p "SMTP Host: " SMTP_HOST
-        read -p "SMTP Port (587): " SMTP_PORT
-        SMTP_PORT=${SMTP_PORT:-587}
-        read -p "SMTP Secure (true/false): " SMTP_SECURE
-        SMTP_SECURE=${SMTP_SECURE:-false}
-        read -p "SMTP User: " SMTP_USER
-        read -p "SMTP Password: " SMTP_PASS
-        read -p "Absender E-Mail: " SMTP_FROM
-        ;;
-    5)
-        SMTP_HOST="smtp.example.com"
-        SMTP_PORT="587"
-        SMTP_SECURE="false"
-        SMTP_USER=""
-        SMTP_PASS=""
-        SMTP_FROM="noreply@localhost"
-        log_warning "Email-Versand deaktiviert!"
-        ;;
-    *)
-        log_error "Ungültige Auswahl"
+    # Domain
+    read -p "Deine Domain (z.B. moving-dinner.example.com): " DOMAIN
+    if [ -z "$DOMAIN" ]; then
+        log_error "Domain ist erforderlich!"
         exit 1
-        ;;
-esac
-
-# Database Password
-echo ""
-log_info "Datenbank Konfiguration..."
-read -p "PostgreSQL Passwort (leer lassen für automatisch generiertes): " DB_PASSWORD
-if [ -z "$DB_PASSWORD" ]; then
-    DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
-    log_success "Generiertes Datenbank-Passwort: ${DB_PASSWORD}"
+    fi
+    BASE_URL="https://${DOMAIN}"
+else
+    # Use existing BASE_URL
+    BASE_URL="${BASE_URL:-https://${DOMAIN}}"
 fi
 
-# Create .env file
-cat > .env << EOF
+# Email Provider (only if not skipping)
+if [ "$SKIP_ENV_CREATION" = false ]; then
+    echo ""
+    log_info "Wähle Email Provider:"
+    echo "  1) Resend (100 Emails/Monat gratis, einfach)"
+    echo "  2) Brevo (300 Emails/Tag gratis, EU-Server)"
+    echo "  3) SendGrid (100 Emails/Tag gratis)"
+    echo "  4) Anderer SMTP Provider"
+    echo "  5) Keine Emails (nur Testing)"
+    read -p "Auswahl (1-5): " EMAIL_CHOICE
+
+    case $EMAIL_CHOICE in
+        1)
+            SMTP_HOST="smtp.resend.com"
+            SMTP_PORT="587"
+            SMTP_SECURE="false"
+            SMTP_USER="resend"
+            read -p "Resend API Key (beginnt mit re_): " SMTP_PASS
+            read -p "Absender E-Mail (z.B. noreply@${DOMAIN}): " SMTP_FROM
+            ;;
+        2)
+            SMTP_HOST="smtp-relay.brevo.com"
+            SMTP_PORT="587"
+            SMTP_SECURE="false"
+            read -p "Brevo SMTP Login: " SMTP_USER
+            read -p "Brevo SMTP Password: " SMTP_PASS
+            read -p "Absender E-Mail: " SMTP_FROM
+            ;;
+        3)
+            SMTP_HOST="smtp.sendgrid.net"
+            SMTP_PORT="587"
+            SMTP_SECURE="false"
+            SMTP_USER="apikey"
+            read -p "SendGrid API Key: " SMTP_PASS
+            read -p "Absender E-Mail: " SMTP_FROM
+            ;;
+        4)
+            read -p "SMTP Host: " SMTP_HOST
+            read -p "SMTP Port (587): " SMTP_PORT
+            SMTP_PORT=${SMTP_PORT:-587}
+            read -p "SMTP Secure (true/false): " SMTP_SECURE
+            SMTP_SECURE=${SMTP_SECURE:-false}
+            read -p "SMTP User: " SMTP_USER
+            read -p "SMTP Password: " SMTP_PASS
+            read -p "Absender E-Mail: " SMTP_FROM
+            ;;
+        5)
+            SMTP_HOST="smtp.example.com"
+            SMTP_PORT="587"
+            SMTP_SECURE="false"
+            SMTP_USER=""
+            SMTP_PASS=""
+            SMTP_FROM="noreply@localhost"
+            log_warning "Email-Versand deaktiviert!"
+            ;;
+        *)
+            log_error "Ungültige Auswahl"
+            exit 1
+            ;;
+    esac
+
+    # Database Password
+    echo ""
+    log_info "Datenbank Konfiguration..."
+    read -p "PostgreSQL Passwort (leer lassen für automatisch generiertes): " DB_PASSWORD
+    if [ -z "$DB_PASSWORD" ]; then
+        DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+        log_success "Generiertes Datenbank-Passwort: ${DB_PASSWORD}"
+    fi
+
+    # Create .env file
+    cat > .env << EOF
 # Moving Dinner Production Configuration
 # Generated: $(date -Iseconds)
 # ACHTUNG: Diese Datei enthält sensible Daten! Nicht committen!
@@ -224,11 +246,17 @@ SMTP_FROM=${SMTP_FROM}
 PORT=3001
 EOF
 
-log_success ".env Datei erstellt"
+    log_success ".env Datei erstellt"
 
-# Secure .env file
-chmod 600 .env
-log_success ".env Berechtigungen gesetzt (nur Owner kann lesen)"
+    # Secure .env file
+    chmod 600 .env
+    log_success ".env Berechtigungen gesetzt (nur Owner kann lesen)"
+else
+    # Load existing values from .env
+    log_info "Verwende existierende .env Konfiguration"
+    source .env
+    DOMAIN=$(echo "${BASE_URL}" | sed 's|https://||')
+fi
 
 ################################################################################
 # Docker Compose Configuration
