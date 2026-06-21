@@ -3,6 +3,12 @@ import prisma from '../db.js';
 import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
+function getParam(params: Record<string, string | string[]>, name: string): string | undefined {
+  const value = params[name];
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 const router = Router();
 
 // POST /api/feature-requests - Create a new feature request or bug report
@@ -44,8 +50,8 @@ router.get('/', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Re
     const { status, type } = req.query;
 
     const where: { status?: string; type?: string } = {};
-    if (status && typeof status === 'string') where.status = status;
-    if (type && typeof type === 'string') where.type = type;
+    if (status && (typeof status === 'string' || Array.isArray(status))) where.status = Array.isArray(status) ? status[0] : status;
+    if (type && (typeof type === 'string' || Array.isArray(type))) where.type = Array.isArray(type) ? type[0] : type;
 
     const requests = await prisma.featureRequest.findMany({
       where,
@@ -84,7 +90,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
 // PATCH /api/feature-requests/:id - Update status/priority (Super-Admin only)
 router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(getParam(req.params, 'id') || '', 10);
     if (isNaN(id)) {
       res.status(400).json({ error: 'Invalid id' });
       return;
@@ -128,7 +134,7 @@ router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, re
 // DELETE /api/feature-requests/:id - Delete a feature request
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(getParam(req.params, 'id') || '', 10);
     if (isNaN(id)) {
       res.status(400).json({ error: 'Invalid id' });
       return;

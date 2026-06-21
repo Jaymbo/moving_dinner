@@ -2,12 +2,18 @@ import { Response, NextFunction } from 'express';
 import prisma from '../db.js';
 import { AuthRequest } from './auth.js';
 
+function getParam(params: Record<string, string | string[]>, name: string): string | undefined {
+  const value = params[name];
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 /**
  * Checks that the authenticated user is an admin of the group specified by :groupId param.
  * Super-admins bypass this check.
  */
 export async function requireGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  const groupId = parseInt(req.params.groupId || req.params.id, 10);
+  const groupId = parseInt(getParam(req.params, 'groupId') || getParam(req.params, 'id') || '', 10);
   if (isNaN(groupId)) {
     res.status(400).json({ error: 'Invalid group id' });
     return;
@@ -40,7 +46,7 @@ export async function requireGroupAdmin(req: AuthRequest, res: Response, next: N
  * Super-admins bypass this check.
  */
 export async function requireGroupMember(req: AuthRequest, res: Response, next: NextFunction) {
-  const groupId = parseInt(req.params.groupId || req.params.id, 10);
+  const groupId = parseInt(getParam(req.params, 'groupId') || getParam(req.params, 'id') || '', 10);
   if (isNaN(groupId)) {
     res.status(400).json({ error: 'Invalid group id' });
     return;
@@ -80,7 +86,7 @@ export async function requireMeetingGroupAdmin(
   res: Response,
   next: NextFunction
 ) {
-  const meetingId = parseInt(req.params.id, 10);
+  const meetingId = parseInt(getParam(req.params, 'id') || '', 10);
   if (isNaN(meetingId)) {
     res.status(400).json({ error: 'Invalid meeting id' });
     return;

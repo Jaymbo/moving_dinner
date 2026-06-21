@@ -9,6 +9,15 @@ import { sendAssignmentEmails, sendDeadlineReminder, sendMail } from '../service
 import { generateRsvpTokens } from '../services/rsvp.js';
 import { logger } from '../utils/logger.js';
 
+/**
+ * Safely extract a single string param from Express params.
+ */
+function getParam(params: Record<string, string | string[]>, name: string): string | undefined {
+  const value = params[name];
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 const router = Router();
 
 // POST /api/admin/test-email – Send a test email (requires auth)
@@ -46,7 +55,7 @@ router.post(
   requireMeetingGroupAdmin,
   async (req: AuthRequest, res: Response) => {
     try {
-      const meetingId = parseInt(req.params.id, 10);
+      const meetingId = parseInt(getParam(req.params, 'id') || '', 10);
       if (isNaN(meetingId)) {
         res.status(400).json({ error: 'Invalid meeting id' });
         return;
@@ -101,7 +110,7 @@ router.post(
   requireMeetingGroupAdmin,
   async (req: AuthRequest, res: Response) => {
     try {
-      const meetingId = parseInt(req.params.id, 10);
+      const meetingId = parseInt(getParam(req.params, 'id') || '', 10);
       if (isNaN(meetingId)) {
         res.status(400).json({ error: 'Invalid meeting id' });
         return;
@@ -155,7 +164,7 @@ router.post(
   requireMeetingGroupAdmin,
   async (req: AuthRequest, res: Response) => {
     try {
-      const meetingId = parseInt(req.params.id, 10);
+      const meetingId = parseInt(getParam(req.params, 'id') || '', 10);
       if (isNaN(meetingId)) {
         res.status(400).json({ error: 'Invalid meeting id' });
         return;

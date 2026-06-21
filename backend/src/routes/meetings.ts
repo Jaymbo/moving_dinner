@@ -23,7 +23,8 @@ router.get(
   requireAuth,
   validateQuery(meetingQuerySchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { group_id: groupId } = req.query as { group_id?: number };
+    const rawGroupId = req.query.group_id;
+    const groupId = rawGroupId ? (Array.isArray(rawGroupId) ? Number(rawGroupId[0]) : Number(rawGroupId)) : undefined;
 
     // Check if user is super-admin
     const currentUser = await prisma.user.findUnique({
