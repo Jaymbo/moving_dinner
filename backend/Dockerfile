@@ -5,7 +5,7 @@ RUN npm ci --frozen-lockfile
 COPY . .
 RUN npx prisma generate
 RUN npm run build
-RUN npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --module ESNext --moduleResolution node --target ES2022 --skipLibCheck --ignoreConfig
+RUN npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --module ESNext --moduleResolution node --target ES2022 --skipLibCheck --ignoreConfig --ignoreDeprecations:6.0
 
 FROM node:20-alpine
 WORKDIR /app
