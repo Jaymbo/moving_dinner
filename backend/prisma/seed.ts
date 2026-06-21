@@ -30,19 +30,63 @@ async function main() {
   });
 
   const users = [
-    { name: 'Anna Müller', email: 'anna@example.com', address: 'Berliner Str. 5, 12345 Berlin', maxGuests: 3, diet: 'vegetarisch' },
-    { name: 'Ben Schmidt', email: 'ben@example.com', address: 'Hamburger Weg 12, 12345 Berlin', maxGuests: 2, diet: null },
-    { name: 'Clara Fischer', email: 'clara@example.com', address: 'Münchner Platz 3, 12345 Berlin', maxGuests: 4, diet: 'vegan' },
-    { name: 'David Weber', email: 'david@example.com', address: 'Kölner Allee 8, 12345 Berlin', maxGuests: 2, diet: null },
-    { name: 'Eva Braun', email: 'eva@example.com', address: 'Frankfurter Ring 15, 12345 Berlin', maxGuests: 3, diet: 'glutenfrei' },
-    { name: 'Felix Hoffmann', email: 'felix@example.com', address: 'Stuttgarter Str. 22, 12345 Berlin', maxGuests: 0, diet: null },
+    {
+      name: 'Anna Müller',
+      email: 'anna@example.com',
+      address: 'Berliner Str. 5, 12345 Berlin',
+      maxGuests: 3,
+      diet: 'vegetarisch',
+    },
+    {
+      name: 'Ben Schmidt',
+      email: 'ben@example.com',
+      address: 'Hamburger Weg 12, 12345 Berlin',
+      maxGuests: 2,
+      diet: null,
+    },
+    {
+      name: 'Clara Fischer',
+      email: 'clara@example.com',
+      address: 'Münchner Platz 3, 12345 Berlin',
+      maxGuests: 4,
+      diet: 'vegan',
+    },
+    {
+      name: 'David Weber',
+      email: 'david@example.com',
+      address: 'Kölner Allee 8, 12345 Berlin',
+      maxGuests: 2,
+      diet: null,
+    },
+    {
+      name: 'Eva Braun',
+      email: 'eva@example.com',
+      address: 'Frankfurter Ring 15, 12345 Berlin',
+      maxGuests: 3,
+      diet: 'glutenfrei',
+    },
+    {
+      name: 'Felix Hoffmann',
+      email: 'felix@example.com',
+      address: 'Stuttgarter Str. 22, 12345 Berlin',
+      maxGuests: 0,
+      diet: null,
+    },
   ];
 
   const createdUsers = [admin];
   for (const u of users) {
     const passwordHash = await bcrypt.hash('demo123', 10);
     const user = await prisma.user.create({
-      data: { name: u.name, email: u.email, passwordHash, address: u.address, maxGuests: u.maxGuests, diet: u.diet, isGuest: false },
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash,
+        address: u.address,
+        maxGuests: u.maxGuests,
+        diet: u.diet,
+        isGuest: false,
+      },
     });
     createdUsers.push(user);
   }
@@ -53,7 +97,12 @@ async function main() {
       description: 'Die originale Moving Dinner Gruppe',
       inviteCode: 'GRP-DEMO01',
       createdBy: admin.id,
-      members: { create: createdUsers.map(u => ({ userId: u.id, role: u.id === admin.id ? 'admin' : 'member' })) },
+      members: {
+        create: createdUsers.map((u) => ({
+          userId: u.id,
+          role: u.id === admin.id ? 'admin' : 'member',
+        })),
+      },
     },
   });
 
@@ -63,16 +112,23 @@ async function main() {
       description: 'Die Kölner Gruppe',
       inviteCode: 'GRP-KOELN1',
       createdBy: admin.id,
-      members: { create: [
-        { userId: admin.id, role: 'admin' },
-        { userId: createdUsers[1].id, role: 'member' },
-        { userId: createdUsers[2].id, role: 'member' },
-      ] },
+      members: {
+        create: [
+          { userId: admin.id, role: 'admin' },
+          { userId: createdUsers[1].id, role: 'member' },
+          { userId: createdUsers[2].id, role: 'member' },
+        ],
+      },
     },
   });
 
   await prisma.groupInvitation.create({
-    data: { groupId: group.id, code: 'JOIN-TEST1', maxUses: 10, expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+    data: {
+      groupId: group.id,
+      code: 'JOIN-TEST1',
+      maxUses: 10,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
   });
 
   const meetingDate = new Date();
@@ -87,7 +143,9 @@ async function main() {
   const members = await prisma.groupMember.findMany({ where: { groupId: group.id } });
   for (const member of members) {
     const token = randomBytes(32).toString('hex');
-    await prisma.rsvpToken.create({ data: { token, meetingId: meeting.id, userId: member.userId } });
+    await prisma.rsvpToken.create({
+      data: { token, meetingId: meeting.id, userId: member.userId },
+    });
   }
 
   const responses = [
@@ -98,7 +156,9 @@ async function main() {
     { userId: createdUsers[5].id, hostWish: 'indifferent' },
   ];
   for (const r of responses) {
-    await prisma.response.create({ data: { meetingId: meeting.id, userId: r.userId, hostWish: r.hostWish } });
+    await prisma.response.create({
+      data: { meetingId: meeting.id, userId: r.userId, hostWish: r.hostWish },
+    });
   }
 
   const pastMeetingDate = new Date();
@@ -107,7 +167,13 @@ async function main() {
   pastDeadline.setDate(pastDeadline.getDate() - 21);
 
   const pastMeeting = await prisma.meeting.create({
-    data: { groupId: group.id, date: pastMeetingDate, deadline: pastDeadline, frozen: true, createdBy: admin.id },
+    data: {
+      groupId: group.id,
+      date: pastMeetingDate,
+      deadline: pastDeadline,
+      frozen: true,
+      createdBy: admin.id,
+    },
   });
 
   const pastResponses = [
@@ -119,15 +185,30 @@ async function main() {
     { userId: admin.id, hostWish: 'indifferent', assignedHost: createdUsers[4].id },
   ];
   for (const r of pastResponses) {
-    await prisma.response.create({ data: { meetingId: pastMeeting.id, userId: r.userId, hostWish: r.hostWish, assignedHost: r.assignedHost } });
+    await prisma.response.create({
+      data: {
+        meetingId: pastMeeting.id,
+        userId: r.userId,
+        hostWish: r.hostWish,
+        assignedHost: r.assignedHost,
+      },
+    });
   }
 
   // Recalculate scores
   console.log('Recalculating scores...');
-  const frozenMeetings = await prisma.meeting.findMany({ where: { frozen: true }, include: { responses: true } });
+  const frozenMeetings = await prisma.meeting.findMany({
+    where: { frozen: true },
+    include: { responses: true },
+  });
   const allUsers = await prisma.user.findMany();
-  const stats = new Map<number, { participations: number; hostings: number; hostedGuests: number }>();
-  for (const user of allUsers) { stats.set(user.id, { participations: 0, hostings: 0, hostedGuests: 0 }); }
+  const stats = new Map<
+    number,
+    { participations: number; hostings: number; hostedGuests: number }
+  >();
+  for (const user of allUsers) {
+    stats.set(user.id, { participations: 0, hostings: 0, hostedGuests: 0 });
+  }
   for (const m of frozenMeetings) {
     for (const r of m.responses) {
       const s = stats.get(r.userId);
@@ -135,7 +216,9 @@ async function main() {
       s.participations++;
       if (r.assignedHost === r.userId) {
         s.hostings++;
-        s.hostedGuests += m.responses.filter(rr => rr.assignedHost === r.userId && rr.userId !== r.userId).length;
+        s.hostedGuests += m.responses.filter(
+          (rr) => rr.assignedHost === r.userId && rr.userId !== r.userId
+        ).length;
       }
     }
   }
@@ -146,8 +229,20 @@ async function main() {
     const score = maxG > 0 ? raw / maxG : raw;
     await prisma.score.upsert({
       where: { userId_groupId: { userId: user.id, groupId: group.id } },
-      update: { participations: s.participations, hostings: s.hostings, hostedGuests: s.hostedGuests, score },
-      create: { userId: user.id, groupId: group.id, participations: s.participations, hostings: s.hostings, hostedGuests: s.hostedGuests, score },
+      update: {
+        participations: s.participations,
+        hostings: s.hostings,
+        hostedGuests: s.hostedGuests,
+        score,
+      },
+      create: {
+        userId: user.id,
+        groupId: group.id,
+        participations: s.participations,
+        hostings: s.hostings,
+        hostedGuests: s.hostedGuests,
+        score,
+      },
     });
   }
 
@@ -192,5 +287,10 @@ async function main() {
 }
 
 main()
-  .catch(e => { console.error('Seed error:', e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+  .catch((e) => {
+    console.error('Seed error:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

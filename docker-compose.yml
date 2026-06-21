@@ -26,7 +26,7 @@ services:
     environment:
       DATABASE_URL: postgresql://movingdinner:movingdinner@db:5432/movingdinner?schema=public
       PORT: '3001'
-      JWT_SECRET: change-me-in-production
+      JWT_SECRET: ${JWT_SECRET:-this-is-a-32-char-dev-secret-change-in-prod}
       SMTP_HOST: ${SMTP_HOST:-smtp.resend.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}
