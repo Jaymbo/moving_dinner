@@ -143,9 +143,8 @@ if [ -f ".env" ]; then
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log_info "Überspringe .env Erstellung - verwende existierende Konfiguration"
-        # Load existing values
-        source .env
-        DOMAIN=$(echo "${BASE_URL}" | sed 's|https://||')
+        # Load existing values safely (grep instead of source to avoid shell issues)
+        DOMAIN=$(grep "^BASE_URL=" .env | cut -d'=' -f2 | sed 's|https://||')
         SKIP_ENV_CREATION=true
     else
         mv .env .env.backup.$(date +%Y%m%d-%H%M%S)
@@ -287,10 +286,9 @@ EOF
     chmod 600 .env
     log_success ".env Berechtigungen gesetzt (nur Owner kann lesen)"
 else
-    # Load existing values from .env
+    # Load existing values from .env safely
     log_info "Verwende existierende .env Konfiguration"
-    source .env
-    DOMAIN=$(echo "${BASE_URL}" | sed 's|https://||')
+    DOMAIN=$(grep "^BASE_URL=" .env | cut -d'=' -f2 | sed 's|https://||')
 fi
 
 ################################################################################
