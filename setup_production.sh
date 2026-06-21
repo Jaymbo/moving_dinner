@@ -29,6 +29,10 @@ if [ "$(id -u)" -eq 0 ] || [ "$(whoami)" = "root" ]; then
     echo "    bash setup_production.sh"
     echo ""
     exit 1
+else
+    echo -e "\033[0;32m[OK] Root-Check bestanden (User: $(whoami))\033[0m"
+    echo "  Skript wird als normaler User ausgeführt - sicher!"
+    echo ""
 fi
 
 set -e  # Bei Fehlern abbrechen
