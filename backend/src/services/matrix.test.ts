@@ -20,7 +20,7 @@ describe('Matrix Service', () => {
   let testUserIds: number[] = [];
 
   beforeEach(async () => {
-    const uniqueId = Date.now().toString().slice(-6);
+    const uniqueId = `${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
     const group = await prisma.group.create({
       data: {
         name: 'Test Matrix Group',
