@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from '../api/client';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -28,14 +31,12 @@ export default function ForgotPasswordPage() {
         <div className="login-card">
           <h1>🍽️ Moving Dinner</h1>
           <h2>E-Mail gesendet</h2>
-          <p style={{ textAlign: 'center', color: '#666' }}>
+          <Alert variant="success">
             Falls ein Account mit der E-Mail <strong>{email}</strong> existiert,
             hast du einen Link zum Zurücksetzen deines Passworts erhalten.
-          </p>
-          <p style={{ textAlign: 'center', color: '#999', fontSize: 14 }}>
             Bitte prüfe auch deinen Spam-Ordner.
-          </p>
-          <Link to="/login" style={{ display: 'block', textAlign: 'center', marginTop: 16 }}>
+          </Alert>
+          <Link to="/login" className="login-footer" style={{ display: 'block' }}>
             Zurück zum Login
           </Link>
         </div>
@@ -48,27 +49,25 @@ export default function ForgotPasswordPage() {
       <div className="login-card">
         <h1>🍽️ Moving Dinner</h1>
         <h2>Passwort vergessen?</h2>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: 16 }}>
+        <p className="login-footer">
           Gib deine E-Mail-Adresse ein und wir senden dir einen Link,
           um dein Passwort zurückzusetzen.
         </p>
-        {error && <div className="error-box">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>E-Mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              placeholder="deine@email.de"
-            />
-          </div>
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <FormField
+            label="E-Mail"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            placeholder="deine@email.de"
+          />
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
             {loading ? 'Wird gesendet...' : 'Link senden'}
-          </button>
+          </Button>
         </form>
-        <p style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
+        <p className="login-footer">
           <Link to="/login">Zurück zum Login</Link>
         </p>
       </div>

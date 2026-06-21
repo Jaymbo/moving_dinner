@@ -19,7 +19,6 @@ export default function AdminGroupsPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [groupScores, setGroupScores] = useState<any[]>([]);
-  const [groupMatrix, setGroupMatrix] = useState<any[]>([]);
 
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
 
@@ -42,16 +41,14 @@ export default function AdminGroupsPage() {
   }
 
   async function loadGroupDetails(groupId: number) {
-    const [m, inv, scores, matrix] = await Promise.all([
+    const [m, inv, scores] = await Promise.all([
       groups.members(groupId),
       groups.listInvitations(groupId),
       groups.scores(groupId),
-      groups.matrix(groupId),
     ]);
     setMembers(m);
     setInvitations(inv);
     setGroupScores(scores);
-    setGroupMatrix(matrix);
   }
 
   async function handleSelectGroup(groupId: number) {
@@ -115,9 +112,12 @@ export default function AdminGroupsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-        <h1 className="page-title" style={{ marginBottom: 0 }}>Gruppen</h1>
-        <div className="actions-stack">
+      <header className="ui-page-header">
+        <div>
+          <h1 className="ui-page-title">Gruppen</h1>
+          <p className="ui-page-subtitle">Erstelle, verwalte und trete Gruppen bei.</p>
+        </div>
+        <div className="ui-page-header-action">
           <button className="btn-primary" onClick={() => setShowCreate(!showCreate)}>
             {showCreate ? '✕ Abbrechen' : '+ Neue Gruppe'}
           </button>
@@ -125,7 +125,7 @@ export default function AdminGroupsPage() {
             {showJoin ? '✕ Abbrechen' : '🔗 Gruppe beitreten'}
           </button>
         </div>
-      </div>
+      </header>
 
       {error && <div className="error-box">{error}</div>}
       {message && <div className="success-box" onClick={() => setMessage('')}>{message}</div>}
@@ -169,7 +169,6 @@ export default function AdminGroupsPage() {
                   members={selectedGroupId === g.id ? members : []}
                   invitations={selectedGroupId === g.id ? invitations : []}
                   scores={selectedGroupId === g.id ? groupScores : []}
-                  matrix={selectedGroupId === g.id ? groupMatrix : []}
                   onToggle={handleSelectGroup}
                   onEdit={startEditGroup}
                   onDelete={handleDeleteGroup}
@@ -178,7 +177,6 @@ export default function AdminGroupsPage() {
                   onMembersChange={setMembers}
                   onInvitationsChange={setInvitations}
                   onScoresChange={setGroupScores}
-                  onMatrixChange={setGroupMatrix}
                   onMessage={setMessage}
                   onError={setError}
                 />

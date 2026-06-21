@@ -9,6 +9,7 @@ import MyMeetingsPage from './pages/MyMeetingsPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
+import MeetupMatrixPage from './pages/MeetupMatrixPage';
 import AdminAssignmentPage from './pages/AdminAssignmentPage';
 import AdminFeatureRequestsPage from './pages/AdminFeatureRequestsPage';
 import RsvpPage from './pages/RsvpPage';
@@ -39,10 +40,12 @@ function Navbar() {
 
   if (!user) return null;
 
-  const navLinks = [
+  const leftLinks = [
     { to: '/', label: 'Meine Treffen' },
     { to: '/groups', label: 'Gruppen' },
     ...(isSuperAdmin ? [{ to: '/admin/users', label: 'Admin' }] : []),
+  ];
+  const rightLinks = [
     { to: '/profile', label: 'Profil' },
   ];
 
@@ -66,9 +69,8 @@ function Navbar() {
         </div>
 
         <div className={`nav-menu ${menuOpen ? 'open' : ''}`}>
-
           <div className="nav-section nav-section-links">
-            {navLinks.map((link) => (
+            {leftLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -85,26 +87,20 @@ function Navbar() {
             ))}
           </div>
           <div className="nav-section nav-section-user">
-            <NavLink
-
-
-
-
-
-
-
-
-              to="/profile"
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-              onClick={() => setMenuOpen(false)}
-            >
-
-              Profil
-            </NavLink>
-
-
-
-            <span className="nav-user-name text-sm text-muted">Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}</span>
+            {rightLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/profile'}
+                className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+            <span className="nav-user-name text-sm text-muted">
+              Hallo, {user.name}{isSuperAdmin ? ' ⭐' : ''}
+            </span>
             <button className="btn-sm nav-logout" onClick={logout}>Abmelden</button>
           </div>
         </div>
@@ -134,6 +130,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><MyMeetingsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><AdminGroupsPage /></ProtectedRoute>} />
+          <Route path="/groups/:groupId/matrix" element={<ProtectedRoute><MeetupMatrixPage /></ProtectedRoute>} />
           <Route path="/groups/:groupId/assignment/:meetingId" element={<ProtectedRoute><AdminAssignmentPage /></ProtectedRoute>} />
           <Route path="/admin" element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
             <Route index element={<Navigate to="/admin/users" replace />} />

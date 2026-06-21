@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { users, auth } from '../api/client';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
+import { Card, CardHeader } from '../components/ui/Card';
+import PageHeader from '../components/ui/PageHeader';
+import Badge from '../components/ui/Badge';
 
 export default function ProfilePage() {
   const { user, refreshUser, logout, isSuperAdmin } = useAuth();
@@ -109,142 +115,156 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h1 className="page-title">Mein Profil {isSuperAdmin && <span className="badge" style={{ background: '#7c3aed', color: '#fff', fontSize: 14, marginLeft: 8 }}>⭐ Super-Admin</span>}</h1>
+      <PageHeader
+        title={
+          <>
+            Mein Profil{' '}
+            {isSuperAdmin && <Badge variant="purple">⭐ Super-Admin</Badge>}
+          </>
+        }
+      />
 
-      <div className="card" style={{ maxWidth: 600 }}>
-        {error && <div className="error-box">{error}</div>}
-        {message && <div className="success-box">{message}</div>}
+      <Card className="profile-card">
+        <CardHeader title="Persönliche Daten" />
+        {error && <Alert variant="error">{error}</Alert>}
+        {message && <Alert variant="success">{message}</Alert>}
 
         <form onSubmit={handleSave}>
-          <div className="form-group">
-            <label>Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label>E-Mail</label>
-            <input type="email" value={user.email} disabled style={{ opacity: 0.6 }} />
-          </div>
-          <div className="form-group">
-            <label>Adresse</label>
-            <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Straße, PLZ Stadt" />
-          </div>
-          <div className="form-group">
-            <label>Maximale Gäste</label>
-            <input type="number" value={maxGuests} onChange={e => setMaxGuests(parseInt(e.target.value) || 0)} min={0} max={20} />
-            <span className="text-sm text-muted">Wie viele Gäste kannst du aufnehmen?</span>
-          </div>
-          <div className="form-group">
-            <label>Ernährungsbesonderheiten</label>
-            <input type="text" value={diet} onChange={e => setDiet(e.target.value)} placeholder="z.B. vegetarisch, vegan, glutenfrei" />
-          </div>
-          <div className="form-group">
-            <label>Notizen</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Sonstige Hinweise" />
-          </div>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <FormField
+            label="Name"
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+          />
+          <FormField
+            label="E-Mail"
+            type="email"
+            value={user.email}
+            disabled
+          />
+          <FormField
+            label="Adresse"
+            type="text"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+            placeholder="Straße, PLZ Stadt"
+          />
+          <FormField
+            label="Maximale Gäste"
+            type="number"
+            value={maxGuests}
+            onChange={e => setMaxGuests(parseInt(e.target.value) || 0)}
+            min={0}
+            max={20}
+            hint="Wie viele Gäste kannst du aufnehmen?"
+          />
+          <FormField
+            label="Ernährungsbesonderheiten"
+            type="text"
+            value={diet}
+            onChange={e => setDiet(e.target.value)}
+            placeholder="z.B. vegetarisch, vegan, glutenfrei"
+          />
+          <FormField
+            label="Notizen"
+            as="textarea"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Sonstige Hinweise"
+          />
+          <Button type="submit" variant="primary" loading={saving}>
             {saving ? 'Speichern...' : 'Speichern'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
 
-      {/* Change Password Section */}
-      <div className="card" style={{ maxWidth: 600, marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Passwort ändern</h2>
-        {passwordError && <div className="error-box">{passwordError}</div>}
-        {passwordMessage && <div className="success-box">{passwordMessage}</div>}
+      <Card className="profile-card">
+        <CardHeader title="Passwort ändern" />
+        {passwordError && <Alert variant="error">{passwordError}</Alert>}
+        {passwordMessage && <Alert variant="success">{passwordMessage}</Alert>}
         <form onSubmit={handleChangePassword}>
-          <div className="form-group">
-            <label>Aktuelles Passwort</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={e => setCurrentPassword(e.target.value)}
-              required
-              placeholder="Aktuelles Passwort"
-            />
-          </div>
-          <div className="form-group">
-            <label>Neues Passwort</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="Mindestens 6 Zeichen"
-            />
-          </div>
-          <div className="form-group">
-            <label>Neues Passwort bestätigen</label>
-            <input
-              type="password"
-              value={confirmNewPassword}
-              onChange={e => setConfirmNewPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="Passwort wiederholen"
-            />
-          </div>
-          <button type="submit" className="btn-primary" disabled={changingPassword}>
+          <FormField
+            label="Aktuelles Passwort"
+            type="password"
+            value={currentPassword}
+            onChange={e => setCurrentPassword(e.target.value)}
+            required
+            placeholder="Aktuelles Passwort"
+          />
+          <FormField
+            label="Neues Passwort"
+            type="password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Mindestens 6 Zeichen"
+          />
+          <FormField
+            label="Neues Passwort bestätigen"
+            type="password"
+            value={confirmNewPassword}
+            onChange={e => setConfirmNewPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Passwort wiederholen"
+          />
+          <Button type="submit" variant="primary" loading={changingPassword}>
             {changingPassword ? 'Wird geändert...' : 'Passwort ändern'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
 
-      {/* Delete Profile Section */}
-      <div className="card" style={{ maxWidth: 600, marginTop: '2rem', borderColor: '#e74c3c' }}>
-        <h2 style={{ color: '#e74c3c', marginBottom: '0.5rem' }}>Profil löschen</h2>
-        <p style={{ color: '#666', marginBottom: '1rem', fontSize: '0.9rem' }}>
-          Wenn du dein Profil löschst, werden alle deine Daten unwiderruflich entfernt. 
+      <Card className="profile-card profile-delete-card">
+        <CardHeader
+          title={<span className="delete-title">Profil löschen</span>}
+          subtitle="Diese Aktion kann nicht rückgängig gemacht werden."
+        />
+        <p className="text-secondary text-sm mb-4">
+          Wenn du dein Profil löschst, werden alle deine Daten unwiderruflich entfernt.
           Du wirst aus allen Gruppen entfernt und deine Antworten, Scores und Verlaufsdaten gelöscht.
-          Diese Aktion kann <strong>nicht</strong> rückgängig gemacht werden.
         </p>
 
         {!showDeleteConfirm ? (
-          <button
-            className="btn-primary"
-            style={{ backgroundColor: '#e74c3c', borderColor: '#e74c3c' }}
-            onClick={() => setShowDeleteConfirm(true)}
-          >
+          <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
             Profil löschen
-          </button>
+          </Button>
         ) : (
-          <div style={{ borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
-            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+          <div className="ui-card-section-border">
+            <p className="text-sm mb-3" style={{ fontWeight: 600 }}>
               Bist du sicher? Gib <strong>LÖSCHEN</strong> ein, um zu bestätigen.
             </p>
-            <div className="form-group">
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={e => setDeleteConfirmText(e.target.value)}
-                placeholder='Tippe "LÖSCHEN" zum Bestätigen'
-                style={{ borderColor: deleteConfirmText && deleteConfirmText !== 'LÖSCHEN' ? '#e74c3c' : undefined }}
-              />
-            </div>
+            <FormField
+              type="text"
+              label="Bestätigung"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder='Tippe "LÖSCHEN" zum Bestätigen'
+            />
             <div className="card-actions">
-              <button
-                className="btn-primary"
-                style={{ backgroundColor: '#e74c3c', borderColor: '#e74c3c' }}
+              <Button
+                variant="danger"
                 onClick={handleDeleteProfile}
                 disabled={deleteConfirmText !== 'LÖSCHEN' || deleting}
+                loading={deleting}
               >
                 {deleting ? 'Wird gelöscht...' : 'Endgültig löschen'}
-              </button>
-              <button
-                className="btn-primary"
-                style={{ backgroundColor: '#6c757d', borderColor: '#6c757d' }}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeleteConfirmText('');
                 }}
               >
                 Abbrechen
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -36,33 +39,50 @@ export default function RegisterPage() {
       <div className="login-card">
         <h1>🍽️ Moving Dinner</h1>
         <p>Erstelle einen neuen Account</p>
-        {error && <div className="error-box">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label>E-Mail</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label>Passwort</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
-          </div>
-          <div className="form-group">
-            <label>Wohnort / Adresse</label>
-            <input type="text" value={address} onChange={e => setAddress(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Max. Gäste, die du aufnehmen kannst</label>
-            <input type="number" min={0} value={maxGuests} onChange={e => setMaxGuests(parseInt(e.target.value, 10) || 0)} required />
-          </div>
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <FormField
+            label="Name"
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+          />
+          <FormField
+            label="E-Mail"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+          />
+          <FormField
+            label="Passwort"
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            minLength={6}
+            hint="Mindestens 6 Zeichen"
+          />
+          <FormField
+            label="Wohnort / Adresse"
+            type="text"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+          />
+          <FormField
+            label="Max. Gäste, die du aufnehmen kannst"
+            type="number"
+            min={0}
+            value={maxGuests}
+            onChange={e => setMaxGuests(parseInt(e.target.value, 10) || 0)}
+            required
+          />
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
             {loading ? 'Registrieren...' : 'Registrieren'}
-          </button>
+          </Button>
         </form>
-        <p style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
+        <p className="login-footer">
           Schon ein Account? <Link to="/login">Anmelden</Link>
         </p>
       </div>

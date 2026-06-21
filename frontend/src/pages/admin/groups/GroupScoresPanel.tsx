@@ -23,7 +23,9 @@ export default function GroupScoresPanel({ groupId, scores, onRefresh, onMessage
   return (
     <div className="card" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
       <h4 style={{ marginTop: 0 }}>📊 Gruppen-Scores</h4>
-      <div className="table-wrapper">
+
+      {/* Desktop: Tabelle */}
+      <div className="table-wrapper table-desktop">
         <table style={{ width: '100%' }}>
           <thead>
             <tr>
@@ -47,6 +49,33 @@ export default function GroupScoresPanel({ groupId, scores, onRefresh, onMessage
           </tbody>
         </table>
       </div>
+
+      {/* Mobile: Cards */}
+      <div className="mobile-card-list">
+        {scores.map((s: any) => (
+          <div key={s.userId} className="ui-mobile-card">
+            <div className="ui-mobile-card-row">
+              <div className="ui-mobile-card-main">
+                <span className="ui-mobile-card-value">{s.user?.name || s.userName}</span>
+                <span className="ui-mobile-card-label">Score: {Number(s.score).toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="ui-mobile-card-row">
+              <span className="ui-mobile-card-label">Teilnahmen</span>
+              <span className="ui-mobile-card-value">{s.participations}</span>
+            </div>
+            <div className="ui-mobile-card-row">
+              <span className="ui-mobile-card-label">Hostings</span>
+              <span className="ui-mobile-card-value">{s.hostings}</span>
+            </div>
+            <div className="ui-mobile-card-row">
+              <span className="ui-mobile-card-label">Gäste</span>
+              <span className="ui-mobile-card-value">{s.hostedGuests}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <button className="btn-sm mt-3" style={{ width: '100%' }} onClick={handleRecalculate}>
         🔄 Scores aktualisieren
       </button>

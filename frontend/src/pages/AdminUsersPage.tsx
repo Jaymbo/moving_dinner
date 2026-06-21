@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { users } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
+import PageHeader from '../components/ui/PageHeader';
+import Badge from '../components/ui/Badge';
 
 export default function AdminUsersPage() {
   const { user, isSuperAdmin, refreshUser } = useAuth();
@@ -73,9 +78,9 @@ export default function AdminUsersPage() {
   }
 
   function getUserTypeBadge(u: any) {
-    if (u.isSuperAdmin) return <span className="badge" style={{ background: '#7c3aed', color: '#fff' }}>⭐ Super-Admin</span>;
-    if (u.isGuest) return <span className="badge badge-yellow">Gast</span>;
-    return <span className="badge badge-green">User</span>;
+    if (u.isSuperAdmin) return <Badge variant="purple">⭐ Super-Admin</Badge>;
+    if (u.isGuest) return <Badge variant="yellow">Gast</Badge>;
+    return <Badge variant="green">User</Badge>;
   }
 
   const filteredUsers = userList.filter((u: any) => {
@@ -93,17 +98,20 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="page-title">Benutzer verwalten</h1>
-      {error && <div className="error-box">{error}</div>}
-      {success && <div className="success-box">{success}</div>}
+      <PageHeader
+        title="Benutzer verwalten"
+        subtitle={`${filteredUsers.length} Benutzer`}
+      />
+      {error && <Alert variant="error">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
 
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
+      <div className="admin-search-bar">
+        <FormField
+          label="Suche"
           type="text"
-          placeholder="Suche nach Name, E-Mail, Adresse, Diät..."
+          placeholder="Name, E-Mail, Adresse, Diät..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 220, maxWidth: 400 }}
         />
         {search && (
           <span className="text-sm text-muted">
@@ -128,27 +136,27 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {filteredUsers.map((u: any) => (
-              <tr key={u.id} style={u.isSuperAdmin ? { background: '#f5f3ff' } : undefined}>
+              <tr key={u.id} className={u.isSuperAdmin ? 'admin-row-superadmin' : undefined}>
                 {editingId === u.id ? (
                   <>
                     <td>{u.id}</td>
-                    <td><input value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></td>
+                    <td><input className="ui-input" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></td>
                     <td>{u.email}</td>
-                    <td><input value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} /></td>
-                    <td><input type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} /></td>
-                    <td><input value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} /></td>
+                    <td><input className="ui-input" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} /></td>
+                    <td><input className="ui-input" type="number" value={editData.maxGuests} onChange={e => setEditData({...editData, maxGuests: parseInt(e.target.value)||0})} /></td>
+                    <td><input className="ui-input" value={editData.diet} onChange={e => setEditData({...editData, diet: e.target.value})} /></td>
                     <td>{getUserTypeBadge(u)}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">
-                        <button className="btn-sm btn-primary" onClick={() => handleSave(u.id)}>✓</button>
-                        <button className="btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                        <Button size="sm" variant="primary" onClick={() => handleSave(u.id)}>✓</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>✕</Button>
                       </div>
                     </td>
                   </>
                 ) : (
                   <>
                     <td>{u.id}</td>
-                    <td>{u.name} {u.id === user?.id && <span style={{ color: '#7c3aed', fontSize: '0.8rem' }}>(du)</span>}</td>
+                    <td>{u.name} {u.id === user?.id && <span className="admin-you-badge">(du)</span>}</td>
                     <td className="text-sm">{u.email}</td>
                     <td className="text-sm">{u.address || '–'}</td>
                     <td>{u.maxGuests}</td>
@@ -156,24 +164,20 @@ export default function AdminUsersPage() {
                     <td>{getUserTypeBadge(u)}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">
-                        <button className="btn-sm" onClick={() => startEdit(u)}>✏️</button>
+                        <Button size="sm" variant="outline" onClick={() => startEdit(u)}>✏️</Button>
                         {u.id !== user?.id && (
-                          <button className="btn-sm btn-danger" onClick={() => handleDelete(u.id)}>🗑️</button>
+                          <Button size="sm" variant="danger" onClick={() => handleDelete(u.id)}>🗑️</Button>
                         )}
                         {isSuperAdmin && u.id !== user?.id && (
-                          <button
-                            className="btn-sm"
-                            style={{
-                              background: u.isSuperAdmin ? '#7c3aed' : '#e5e7eb',
-                              color: u.isSuperAdmin ? '#fff' : '#374151',
-                              border: '1px solid #d1d5db',
-                            }}
+                          <Button
+                            size="sm"
+                            variant={u.isSuperAdmin ? 'primary' : 'outline'}
                             onClick={() => handleToggleSuperAdmin(u.id, u.isSuperAdmin)}
                             disabled={togglingSuperAdmin === u.id}
                             title={u.isSuperAdmin ? 'Super-Admin entfernen' : 'Zum Super-Admin machen'}
                           >
                             {togglingSuperAdmin === u.id ? '...' : '⭐'}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -183,7 +187,7 @@ export default function AdminUsersPage() {
             ))}
             {filteredUsers.length === 0 && search && (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', padding: '1.5rem', color: '#999' }}>
+                <td colSpan={9} className="admin-empty-cell">
                   Keine Benutzer gefunden für „{search}"
                 </td>
               </tr>

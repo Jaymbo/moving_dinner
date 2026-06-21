@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { meetings, responses, groups } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
+import { Card, CardHeader } from '../components/ui/Card';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function MyMeetingsPage() {
   const { user } = useAuth();
@@ -106,45 +110,51 @@ export default function MyMeetingsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="page-title" style={{ marginBottom: 0 }}>Meine Treffen</h1>
-        <button 
-          className="btn-primary" 
-          onClick={() => setShowCreate(!showCreate)} 
-          disabled={creatableGroups.length === 0}
-        >
-          {showCreate ? '✕ Abbrechen' : '+ Neues Treffen'}
-        </button>
-      </div>
+      <PageHeader
+        title="Meine Treffen"
+        subtitle="Verwalte deine Moving-Dinner-Treffen und melde dich an."
+        action={
+          <Button
+            variant="primary"
+            onClick={() => setShowCreate(!showCreate)}
+            disabled={creatableGroups.length === 0}
+          >
+            {showCreate ? '✕ Abbrechen' : '+ Neues Treffen'}
+          </Button>
+        }
+      />
 
-      {error && <div className="error-box">{error}</div>}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {showCreate && (
-        <div className="card mb-4">
+        <Card className="mb-4">
           <h3>Neues Treffen erstellen</h3>
           <form onSubmit={handleCreate} className="mt-4">
+            <FormField
+              label="Gruppe"
+              as="select"
+              value={newGroupId || ''}
+              onChange={e => setNewGroupId(parseInt(e.target.value))}
+              required
+            >
+              {creatableGroups.map((g: any) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}{g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}
+                </option>
+              ))}
+            </FormField>
+            <FormField
+              label="Datum"
+              type="date"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+              required
+            />
             <div className="form-group">
-              <label>Gruppe</label>
-              <select 
-                value={newGroupId || ''} 
-                onChange={e => setNewGroupId(parseInt(e.target.value))}
-                required
-              >
-                {creatableGroups.map((g: any) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}{g.meetingCreation === 'all' ? ' (Alle dürfen)' : ' (Nur Admins)'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Datum</label>
-              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label>Anmeldeschluss</label>
+              <label className="ui-label">Anmeldeschluss</label>
               <div className="flex flex-wrap gap-2">
                 <input
+                  className="ui-input"
                   type="date"
                   value={newDeadlineDate}
                   onChange={e => setNewDeadlineDate(e.target.value)}
@@ -152,6 +162,7 @@ export default function MyMeetingsPage() {
                   aria-label="Anmeldeschluss Datum"
                 />
                 <input
+                  className="ui-input"
                   type="time"
                   value={newDeadlineTime}
                   onChange={e => setNewDeadlineTime(e.target.value)}
@@ -160,11 +171,11 @@ export default function MyMeetingsPage() {
                 />
               </div>
             </div>
-            <button type="submit" className="btn-primary" disabled={creating}>
+            <Button type="submit" variant="primary" loading={creating}>
               {creating ? 'Erstellen...' : 'Treffen erstellen'}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
       )}
 
       {myMeetings.length === 0 ? (
@@ -175,18 +186,18 @@ export default function MyMeetingsPage() {
       ) : (
         <div className="grid grid-2">
           {myMeetings.map((m: any) => (
-            <div key={m.id} className="card">
-              <div className="card-header">
-                <div>
-                  <h3>📅 {formatDate(m.date)}</h3>
-                  <span className="text-sm text-muted">{m.group?.name}</span>
-                </div>
-                {m.frozen ? (
-                  <span className="badge badge-gray">Abgeschlossen</span>
-                ) : (
-                  <span className="badge badge-green">Offen</span>
-                )}
-              </div>
+            <Card key={m.id}>
+              <CardHeader
+                title={<>📅 {formatDate(m.date)}</>}
+                subtitle={m.group?.name}
+                action={
+                  m.frozen ? (
+                    <span className="badge badge-gray">Abgeschlossen</span>
+                  ) : (
+                    <span className="badge badge-green">Offen</span>
+                  )
+                }
+              />
               <p className="text-sm mb-2">Deadline: {formatDeadline(m.deadline)}</p>
               <p className="text-sm mb-4">Anmeldungen: {m.totalResponses ?? m._count?.responses ?? m.responses?.length ?? 0}</p>
 
@@ -201,26 +212,26 @@ export default function MyMeetingsPage() {
                           '🤷 Egal'
                         }</strong>
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        <button className="btn-sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</button>
-                        <button className="btn-sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</button>
-                        <button className="btn-sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</button>
-                        <button className="btn-sm btn-danger" onClick={() => handleWithdraw(m.id)}>Zurückziehen</button>
+                      <div className="actions-stack">
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</Button>
+                        <Button size="sm" variant="danger" onClick={() => handleWithdraw(m.id)}>Zurückziehen</Button>
                       </div>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm mb-2">Du hast dich noch nicht angemeldet:</p>
-                      <div className="flex flex-wrap gap-2">
-                        <button className="btn-primary btn-sm" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</button>
-                        <button className="btn-sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</button>
-                        <button className="btn-sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</button>
+                      <div className="actions-stack">
+                        <Button size="sm" variant="primary" onClick={() => handleResponse(m.id, 'will_host')}>🏠 Will hosten</Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'indifferent')}>🤷 Egal</Button>
+                        <Button size="sm" onClick={() => handleResponse(m.id, 'cannot_host')}>❌ Kann nicht</Button>
                       </div>
                     </div>
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

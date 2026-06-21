@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { groups } from '../../../api/client';
 import { useAuth } from '../../../context/AuthContext';
 import { CopyButton, getJoinLink, getMyRole, isActualMember } from './utils';
 import GroupMembersTable from './GroupMembersTable';
 import InvitationsPanel from './InvitationsPanel';
 import GroupScoresPanel from './GroupScoresPanel';
-import MeetupMatrixPanel from './MeetupMatrixPanel';
 import GroupMeetingsPanel from './GroupMeetingsPanel';
 
 interface GroupCardProps {
@@ -14,7 +14,6 @@ interface GroupCardProps {
   members: any[];
   invitations: any[];
   scores: any[];
-  matrix: any[];
   onToggle: (groupId: number) => void;
   onEdit: (group: any) => void;
   onDelete: (groupId: number) => void;
@@ -23,14 +22,13 @@ interface GroupCardProps {
   onMembersChange: (members: any[]) => void;
   onInvitationsChange: (invitations: any[]) => void;
   onScoresChange: (scores: any[]) => void;
-  onMatrixChange: (matrix: any[]) => void;
   onMessage: (message: string) => void;
   onError: (error: string) => void;
 }
 
 export default function GroupCard(props: GroupCardProps) {
   const { user } = useAuth();
-  const { group, selected, members, invitations, scores, matrix, onToggle, onEdit, onDelete, onLeave, onRefresh, onMembersChange, onInvitationsChange, onMessage, onError } = props;
+  const { group, selected, members, invitations, scores, onToggle, onEdit, onDelete, onLeave, onRefresh, onMembersChange, onInvitationsChange, onMessage, onError } = props;
 
   const myRole = getMyRole(group, user?.id);
   const isAdmin = myRole === 'admin';
@@ -132,7 +130,19 @@ export default function GroupCard(props: GroupCardProps) {
                   onMessage={onMessage}
                   onError={onError}
                 />
-                <MeetupMatrixPanel scores={scores} matrix={matrix} />
+                <div className="card" style={{ background: '#f9fafb', border: '1px solid var(--color-border)' }}>
+                  <h4 style={{ marginTop: 0 }}>🤝 Treffen-Matrix</h4>
+                  <p className="text-sm text-muted">
+                    Zeigt, wie oft zwei Personen bereits gemeinsam zu Abend gegessen sind.
+                  </p>
+                  <Link
+                    className="btn-sm mt-3"
+                    to={`/groups/${group.id}/matrix`}
+                    style={{ width: '100%' }}
+                  >
+                    🔍 Matrix öffnen
+                  </Link>
+                </div>
               </div>
             </>
           )}

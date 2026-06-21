@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { auth, setToken } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
 
 export default function ResetPasswordPage() {
   const { token } = useParams<{ token: string }>();
@@ -51,10 +54,10 @@ export default function ResetPasswordPage() {
         <div className="login-card">
           <h1>🍽️ Moving Dinner</h1>
           <h2>Ungültiger Link</h2>
-          <p style={{ textAlign: 'center', color: '#666' }}>
+          <Alert variant="error">
             Dieser Link zum Zurücksetzen des Passworts ist ungültig.
-          </p>
-          <Link to="/forgot-password" style={{ display: 'block', textAlign: 'center', marginTop: 16 }}>
+          </Alert>
+          <Link to="/forgot-password" className="login-footer" style={{ display: 'block' }}>
             Neuen Link anfordern
           </Link>
         </div>
@@ -68,10 +71,10 @@ export default function ResetPasswordPage() {
         <div className="login-card">
           <h1>🍽️ Moving Dinner</h1>
           <h2>Passwort geändert!</h2>
-          <p style={{ textAlign: 'center', color: '#666' }}>
+          <Alert variant="success">
             Dein Passwort wurde erfolgreich geändert. Du wirst automatisch eingeloggt...
-          </p>
-          <Link to="/" style={{ display: 'block', textAlign: 'center', marginTop: 16 }}>
+          </Alert>
+          <Link to="/" className="login-footer" style={{ display: 'block' }}>
             Zur Startseite
           </Link>
         </div>
@@ -84,38 +87,34 @@ export default function ResetPasswordPage() {
       <div className="login-card">
         <h1>🍽️ Moving Dinner</h1>
         <h2>Neues Passwort setzen</h2>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: 16 }}>
+        <p className="login-footer">
           Gib dein neues Passwort ein.
         </p>
-        {error && <div className="error-box">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Neues Passwort</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="Mindestens 6 Zeichen"
-            />
-          </div>
-          <div className="form-group">
-            <label>Passwort bestätigen</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="Passwort wiederholen"
-            />
-          </div>
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <FormField
+            label="Neues Passwort"
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Mindestens 6 Zeichen"
+          />
+          <FormField
+            label="Passwort bestätigen"
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Passwort wiederholen"
+          />
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
             {loading ? 'Wird geändert...' : 'Passwort ändern'}
-          </button>
+          </Button>
         </form>
-        <p style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
+        <p className="login-footer">
           <Link to="/login">Zurück zum Login</Link>
         </p>
       </div>

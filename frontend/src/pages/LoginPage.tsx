@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
+import FormField from '../components/ui/FormField';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -29,24 +32,30 @@ export default function LoginPage() {
       <div className="login-card">
         <h1>🍽️ Moving Dinner</h1>
         <p>Melde dich an, um deine Treffen zu sehen</p>
-        {error && <div className="error-box">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>E-Mail</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label>Passwort</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          </div>
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <FormField
+            label="E-Mail"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+          />
+          <FormField
+            label="Passwort"
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+          />
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
             {loading ? 'Anmelden...' : 'Anmelden'}
-          </button>
+          </Button>
         </form>
-        <p style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
+        <p className="login-footer">
           <Link to="/forgot-password">Passwort vergessen?</Link>
         </p>
-        <p style={{ marginTop: 8, textAlign: 'center', fontSize: 14 }}>
+        <p className="login-footer">
           Noch kein Account? <Link to="/register">Registrieren</Link>
         </p>
       </div>
