@@ -9,6 +9,28 @@
 # Verwendung: bash setup_production.sh
 ################################################################################
 
+################################################################################
+# ROOT CHECK - MUST RUN AS NON-ROOT USER
+################################################################################
+if [ "$(id -u)" -eq 0 ] || [ "$(whoami)" = "root" ]; then
+    echo ""
+    echo -e "\033[0;31m[ERROR] Bitte dieses Skript NICHT als root ausführen!\033[0m"
+    echo ""
+    echo "  Du führst dieses Skript als root User aus."
+    echo "  Das ist ein Sicherheitsrisiko und wird nicht unterstützt."
+    echo ""
+    echo "  Lösung: Erstelle einen normalen User und führe das Skript damit aus:"
+    echo ""
+    echo "    # Als root ausführen:"
+    echo "    adduser movingdinner"
+    echo "    usermod -aG docker movingdinner"
+    echo "    su - movingdinner"
+    echo "    cd ~/moving_dinner"
+    echo "    bash setup_production.sh"
+    echo ""
+    exit 1
+fi
+
 set -e  # Bei Fehlern abbrechen
 
 # Farben für Ausgabe
