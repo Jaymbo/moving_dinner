@@ -1,10 +1,33 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+/**
+ * Validates and loads configuration from environment variables.
+ * Fails fast on startup if required values are missing.
+ */
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+function getJwtSecret(): string {
+  const value = process.env.JWT_SECRET || 'change-me-in-production';
+  if (value.length < 32) {
+    throw new Error(
+      'JWT_SECRET must be at least 32 characters long. ' +
+        "Generate a secure secret, e.g. with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
+  }
+  return value;
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://movingdinner:movingdinner@localhost:5432/movingdinner?schema=public',
-  jwtSecret: process.env.JWT_SECRET || 'change-me-in-production',
+  databaseUrl: getRequiredEnv('DATABASE_URL'),
+  jwtSecret: getJwtSecret(),
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.example.com',
     port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -14,4 +37,6 @@ export const config = {
     from: process.env.SMTP_FROM || 'Moving Dinner <noreply@example.com>',
   },
   baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  nodeEnv: process.env.NODE_ENV || 'development',
+  isProduction: process.env.NODE_ENV === 'production',
 };

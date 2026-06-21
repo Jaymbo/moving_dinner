@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import prisma from '../db';
+import { config } from '../config.js';
+import prisma from '../db.js';
 
 export interface AuthRequest extends Request {
   userId?: number;
-  userRole?: string;  // role in the current group context (set by groupAuth middleware)
+  userRole?: string; // role in the current group context (set by groupAuth middleware)
   isSuperAdmin?: boolean; // set by requireSuperAdmin middleware
 }
 

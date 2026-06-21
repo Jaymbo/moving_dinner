@@ -1,32 +1,40 @@
 import express from 'express';
-import cors from 'cors';
-import { config } from './config';
-import prisma from './db';
+import { config } from './config.js';
+import prisma from './db.js';
+import { logger } from './utils/logger.js';
+import { applySecurityMiddleware } from './middleware/security.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 // Routes
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import groupRoutes from './routes/groups';
-import joinRoutes from './routes/join';
-import meetingRoutes from './routes/meetings';
-import responseRoutes from './routes/responses';
-import rsvpRoutes from './routes/rsvp';
-import assignmentRoutes from './routes/assignment';
-import publicRoutes from './routes/public';
-import adminRoutes from './routes/admin';
-import featureRequestRoutes from './routes/featureRequests';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import groupRoutes from './routes/groups.js';
+import joinRoutes from './routes/join.js';
+import meetingRoutes from './routes/meetings.js';
+import responseRoutes from './routes/responses.js';
+import rsvpRoutes from './routes/rsvp.js';
+import assignmentRoutes from './routes/assignment.js';
+import publicRoutes from './routes/public.js';
+import adminRoutes from './routes/admin.js';
+import featureRequestRoutes from './routes/featureRequests.js';
 
 // Jobs
-import { startJobs } from './jobs';
+import { startJobs } from './jobs/index.js';
 
 const app = express();
 
-app.use(cors());
+applySecurityMiddleware(app);
+
 app.use(express.json());
 
 // Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res, next) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), database: 'connected' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Mount routes
@@ -43,25 +51,25 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/feature-requests', featureRequestRoutes);
 
 // Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
+app.use(errorHandler);
 
 const server = app.listen(config.port, async () => {
   try {
     await prisma.$connect();
-    console.log(`Database connected`);
-    console.log(`Server running on port ${config.port}`);
+    logger.info('Database connected');
+    logger.info(`Server running on port ${config.port}`);
     startJobs();
   } catch (err) {
-    console.error('Failed to connect to database:', err);
+    logger.error(
+      'Failed to connect to database',
+      err instanceof Error ? { message: err.message } : undefined
+    );
     process.exit(1);
   }
 });
 
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down...');
+  logger.info('SIGTERM received, shutting down...');
   server.close();
   await prisma.$disconnect();
   process.exit(0);

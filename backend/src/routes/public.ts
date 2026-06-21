@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
+import prisma from '../db.js';
 
 const router = Router();
 
@@ -29,7 +29,10 @@ router.get('/meetings/active', async (_req, res: Response) => {
 router.post('/meetings/:id/register', async (req, res: Response) => {
   try {
     const meetingId = parseInt(req.params.id, 10);
-    if (isNaN(meetingId)) { res.status(400).json({ error: 'Invalid meeting id' }); return; }
+    if (isNaN(meetingId)) {
+      res.status(400).json({ error: 'Invalid meeting id' });
+      return;
+    }
 
     const { name, email, hostWish, diet } = req.body;
     if (!name || !email) {
@@ -42,9 +45,18 @@ router.post('/meetings/:id/register', async (req, res: Response) => {
     }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Meeting is frozen' }); return; }
-    if (meeting.deadline < new Date()) { res.status(403).json({ error: 'Deadline has passed' }); return; }
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found' });
+      return;
+    }
+    if (meeting.frozen) {
+      res.status(403).json({ error: 'Meeting is frozen' });
+      return;
+    }
+    if (meeting.deadline < new Date()) {
+      res.status(403).json({ error: 'Deadline has passed' });
+      return;
+    }
 
     // Check if user with this email already exists
     let user = await prisma.user.findUnique({ where: { email } });

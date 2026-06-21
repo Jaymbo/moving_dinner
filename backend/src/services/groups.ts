@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * Generate a unique invite code for a group.
@@ -18,7 +18,12 @@ export function generateJoinCode(): string {
 /**
  * Create a new group with the creator as admin.
  */
-export async function createGroup(name: string, description: string | null, createdBy: number, meetingCreation: string = 'admin'): Promise<{ id: number; inviteCode: string }> {
+export async function createGroup(
+  name: string,
+  description: string | null,
+  createdBy: number,
+  meetingCreation: string = 'admin'
+): Promise<{ id: number; inviteCode: string }> {
   const inviteCode = generateInviteCode();
   const group = await prisma.group.create({
     data: {
@@ -38,7 +43,10 @@ export async function createGroup(name: string, description: string | null, crea
 /**
  * Join a group via invite code (the permanent group code).
  */
-export async function joinGroupByInviteCode(inviteCode: string, userId: number): Promise<{ success: boolean; groupId?: number; error?: string }> {
+export async function joinGroupByInviteCode(
+  inviteCode: string,
+  userId: number
+): Promise<{ success: boolean; groupId?: number; error?: string }> {
   const group = await prisma.group.findUnique({ where: { inviteCode } });
   if (!group) return { success: false, error: 'Invalid invite code' };
 
@@ -58,7 +66,10 @@ export async function joinGroupByInviteCode(inviteCode: string, userId: number):
 /**
  * Join a group via invitation code (time-limited, usage-limited).
  */
-export async function joinGroupByInvitationCode(code: string, userId: number): Promise<{ success: boolean; groupId?: number; error?: string }> {
+export async function joinGroupByInvitationCode(
+  code: string,
+  userId: number
+): Promise<{ success: boolean; groupId?: number; error?: string }> {
   const invitation = await prisma.groupInvitation.findUnique({ where: { code } });
   if (!invitation) return { success: false, error: 'Invalid invitation code' };
 

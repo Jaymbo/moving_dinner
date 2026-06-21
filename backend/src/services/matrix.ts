@@ -1,4 +1,4 @@
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * Recalculate the meetup matrix for a specific group from frozen meetings.

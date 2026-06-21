@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
-import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import prisma from '../db.js';
+import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get('/', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Re
   try {
     const { status, type } = req.query;
 
-    const where: any = {};
+    const where: { status?: string; type?: string } = {};
     if (status && typeof status === 'string') where.status = status;
     if (type && typeof type === 'string') where.type = type;
 
@@ -78,7 +78,10 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
 router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     const { status, priority } = req.body;
 
@@ -93,7 +96,10 @@ router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, re
     }
 
     const existing = await prisma.featureRequest.findUnique({ where: { id } });
-    if (!existing) { res.status(404).json({ error: 'Feature request not found' }); return; }
+    if (!existing) {
+      res.status(404).json({ error: 'Feature request not found' });
+      return;
+    }
 
     const updated = await prisma.featureRequest.update({
       where: { id },
@@ -114,10 +120,16 @@ router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, re
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     const existing = await prisma.featureRequest.findUnique({ where: { id } });
-    if (!existing) { res.status(404).json({ error: 'Feature request not found' }); return; }
+    if (!existing) {
+      res.status(404).json({ error: 'Feature request not found' });
+      return;
+    }
 
     // Check if user is the owner or a super admin
     if (existing.userId !== req.userId) {

@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
+import prisma from '../db.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { requireAuth, generateToken, AuthRequest } from '../middleware/auth';
-import { sendPasswordResetEmail } from '../services/email';
-import { config } from '../config';
+import { requireAuth, generateToken, AuthRequest } from '../middleware/auth.js';
+import { sendPasswordResetEmail } from '../services/email.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -49,7 +49,10 @@ router.post('/register', async (req, res: Response) => {
         isSuperAdmin: isFirstUser,
       },
       select: {
-        id: true, name: true, email: true, isSuperAdmin: true,
+        id: true,
+        name: true,
+        email: true,
+        isSuperAdmin: true,
       },
     });
 
@@ -85,8 +88,12 @@ router.post('/login', async (req, res: Response) => {
 
     const token = generateToken(user.id);
     res.json({
-      id: user.id, name: user.name, email: user.email,
-      isGuest: user.isGuest, isSuperAdmin: user.isSuperAdmin, token,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isGuest: user.isGuest,
+      isSuperAdmin: user.isSuperAdmin,
+      token,
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -100,9 +107,16 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: {
-        id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true,
-        isSuperAdmin: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        address: true,
+        maxGuests: true,
+        notes: true,
+        diet: true,
+        isGuest: true,
+        isSuperAdmin: true,
+        createdAt: true,
         scores: true,
         groupMembers: {
           include: {
@@ -113,7 +127,10 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
         },
       },
     });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
     res.json(user);
   } catch (err) {
     console.error('Get me error:', err);
@@ -133,7 +150,9 @@ router.post('/forgot-password', async (req, res: Response) => {
     const user = await prisma.user.findUnique({ where: { email } });
     // Always return success to prevent email enumeration
     if (!user || !user.passwordHash) {
-      res.json({ message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet' });
+      res.json({
+        message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet',
+      });
       return;
     }
 
@@ -159,11 +178,15 @@ router.post('/forgot-password', async (req, res: Response) => {
     const resetUrl = `${config.baseUrl}/reset-password/${token}`;
     await sendPasswordResetEmail(user.email, user.name, resetUrl);
 
-    res.json({ message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet' });
+    res.json({
+      message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet',
+    });
   } catch (err) {
     console.error('Forgot password error:', err);
     // Still return success to prevent information leakage
-    res.json({ message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet' });
+    res.json({
+      message: 'Falls ein Account mit dieser E-Mail existiert, wurde eine E-Mail gesendet',
+    });
   }
 });
 

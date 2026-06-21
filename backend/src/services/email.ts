@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
-import { config } from '../config';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -9,9 +10,7 @@ function getTransporter(): nodemailer.Transporter {
       host: config.smtp.host,
       port: config.smtp.port,
       secure: config.smtp.secure,
-      auth: config.smtp.user
-        ? { user: config.smtp.user, pass: config.smtp.pass }
-        : undefined,
+      auth: config.smtp.user ? { user: config.smtp.user, pass: config.smtp.pass } : undefined,
     });
   }
   return transporter;
@@ -34,10 +33,10 @@ export async function sendMail(options: MailOptions): Promise<boolean> {
       subject: options.subject,
       text: options.body,
     });
-    console.log(`Email sent to ${options.to}: ${info.messageId}`);
+    logger.info(`Email sent to ${options.to}`, { messageId: info.messageId });
     return true;
   } catch (err) {
-    console.error(`Failed to send email to ${options.to}:`, err);
+    logger.error(`Failed to send email to ${options.to}`, { error: err });
     return false;
   }
 }
@@ -51,17 +50,21 @@ export async function notifyGroupNewMeeting(
   meetingDate: Date,
   deadline: Date
 ): Promise<void> {
-  const members = await (await import('../db')).default.groupMember.findMany({
+  const members = await (
+    await import('../db')
+  ).default.groupMember.findMany({
     where: { groupId },
     include: { user: true },
   });
 
-  const tokens = await (await import('../db')).default.rsvpToken.findMany({
+  const tokens = await (
+    await import('../db')
+  ).default.rsvpToken.findMany({
     where: { meetingId },
     include: { user: true },
   });
 
-  const tokenMap = new Map(tokens.map(t => [t.userId, t.token]));
+  const tokenMap = new Map(tokens.map((t) => [t.userId, t.token]));
   const dateStr = meetingDate.toLocaleDateString('de-DE');
   const deadlineStr = deadline.toLocaleDateString('de-DE');
 
@@ -107,8 +110,8 @@ export async function sendDeadlineReminder(
   });
   if (!meeting) return;
 
-  const respondedUserIds = new Set(meeting.responses.map(r => r.userId));
-  const tokenMap = new Map(meeting.rsvpTokens.map(t => [t.userId, t.token]));
+  const respondedUserIds = new Set(meeting.responses.map((r) => r.userId));
+  const tokenMap = new Map(meeting.rsvpTokens.map((t) => [t.userId, t.token]));
 
   // Get all group members
   const members = await prisma.groupMember.findMany({
@@ -159,7 +162,11 @@ Moving Dinner`;
 /**
  * Send assignment notifications after freeze.
  */
-export async function sendPasswordResetEmail(email: string, name: string, resetUrl: string): Promise<boolean> {
+export async function sendPasswordResetEmail(
+  email: string,
+  name: string,
+  resetUrl: string
+): Promise<boolean> {
   const body = `Hallo ${name},
 
 Du hast einen Link zum Zurücksetzen deines Passworts angefordert.
@@ -195,12 +202,15 @@ export async function sendAssignmentEmails(meetingId: number): Promise<void> {
   const dateStr = meeting.date.toLocaleDateString('de-DE');
 
   // Group by host
-  const hostGroups = new Map<number, { host: typeof meeting.responses[0]['user']; guests: (typeof meeting.responses[0])[] }>();
+  const hostGroups = new Map<
+    number,
+    { host: (typeof meeting.responses)[0]['user']; guests: (typeof meeting.responses)[0][] }
+  >();
 
   for (const response of meeting.responses) {
     if (response.assignedHost === null) continue;
     if (!hostGroups.has(response.assignedHost)) {
-      const hostResponse = meeting.responses.find(r => r.userId === response.assignedHost);
+      const hostResponse = meeting.responses.find((r) => r.userId === response.assignedHost);
       hostGroups.set(response.assignedHost, {
         host: hostResponse!.user,
         guests: [],

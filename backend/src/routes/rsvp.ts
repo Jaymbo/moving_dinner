@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { validateRsvpToken, processRsvp } from '../services/rsvp';
+import { validateRsvpToken, processRsvp } from '../services/rsvp.js';
 
 const router = Router();
 

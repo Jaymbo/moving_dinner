@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
-import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth';
-import { requireAnyGroupAdmin } from '../middleware/groupAuth';
+import prisma from '../db.js';
+import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
@@ -11,8 +10,16 @@ router.get('/', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: R
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        address: true,
+        maxGuests: true,
+        notes: true,
+        diet: true,
+        isGuest: true,
+        isSuperAdmin: true,
+        createdAt: true,
       },
       orderBy: { id: 'asc' },
     });
@@ -27,17 +34,31 @@ router.get('/', requireAuth, requireSuperAdmin, async (_req: AuthRequest, res: R
 router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        address: true,
+        maxGuests: true,
+        notes: true,
+        diet: true,
+        isGuest: true,
+        isSuperAdmin: true,
+        createdAt: true,
         groupMembers: { include: { group: true } },
       },
     });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
     res.json(user);
   } catch (err) {
     console.error('Get user error:', err);
@@ -49,7 +70,10 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     // Allow editing own profile, or if user is a group admin / super-admin
     if (req.userId !== id) {
@@ -81,8 +105,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         ...(diet !== undefined && { diet }),
       },
       select: {
-        id: true, name: true, email: true, address: true,
-        maxGuests: true, notes: true, diet: true, isGuest: true, isSuperAdmin: true,
+        id: true,
+        name: true,
+        email: true,
+        address: true,
+        maxGuests: true,
+        notes: true,
+        diet: true,
+        isGuest: true,
+        isSuperAdmin: true,
       },
     });
     res.json(user);
@@ -96,7 +127,10 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     // Only allow deleting own profile, unless super-admin
     if (req.userId !== id) {
@@ -121,16 +155,14 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     for (const membership of adminMemberships) {
-      const otherMembers = membership.group.members.filter(m => m.userId !== id);
+      const otherMembers = membership.group.members.filter((m) => m.userId !== id);
 
       if (otherMembers.length === 0) {
         // User is the only member - delete the entire group
         await prisma.group.delete({ where: { id: membership.groupId } });
       } else {
         // Promote the longest-standing member to admin
-        const oldestMember = otherMembers.reduce((a, b) =>
-          a.joinedAt < b.joinedAt ? a : b
-        );
+        const oldestMember = otherMembers.reduce((a, b) => (a.joinedAt < b.joinedAt ? a : b));
         await prisma.groupMember.update({
           where: { id: oldestMember.id },
           data: { role: 'admin' },
@@ -150,7 +182,10 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     if (req.userId !== id) {
       res.status(403).json({ error: 'Can only convert your own account' });
@@ -158,11 +193,20 @@ router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response)
     }
 
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-    if (!user.isGuest) { res.status(400).json({ error: 'User is not a guest' }); return; }
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    if (!user.isGuest) {
+      res.status(400).json({ error: 'User is not a guest' });
+      return;
+    }
 
     const { password, address, maxGuests } = req.body;
-    if (!password) { res.status(400).json({ error: 'password is required' }); return; }
+    if (!password) {
+      res.status(400).json({ error: 'password is required' });
+      return;
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const updated = await prisma.user.update({
@@ -188,37 +232,48 @@ router.post('/:id/convert', requireAuth, async (req: AuthRequest, res: Response)
 });
 
 // PUT /api/users/:id/super-admin - Toggle super-admin status (Super-Admin only)
-router.put('/:id/super-admin', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+router.put(
+  '/:id/super-admin',
+  requireAuth,
+  requireSuperAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        res.status(400).json({ error: 'Invalid id' });
+        return;
+      }
 
-    const { isSuperAdmin } = req.body;
-    if (typeof isSuperAdmin !== 'boolean') {
-      res.status(400).json({ error: 'isSuperAdmin must be a boolean' });
-      return;
+      const { isSuperAdmin } = req.body;
+      if (typeof isSuperAdmin !== 'boolean') {
+        res.status(400).json({ error: 'isSuperAdmin must be a boolean' });
+        return;
+      }
+
+      // Prevent removing your own super-admin status
+      if (req.userId === id && !isSuperAdmin) {
+        res.status(400).json({ error: 'Cannot remove your own super-admin status' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { isSuperAdmin },
+        select: { id: true, name: true, email: true, isSuperAdmin: true },
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error('Toggle super-admin error:', err);
+      res.status(500).json({ error: 'Failed to update super-admin status' });
     }
-
-    // Prevent removing your own super-admin status
-    if (req.userId === id && !isSuperAdmin) {
-      res.status(400).json({ error: 'Cannot remove your own super-admin status' });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-
-    const updated = await prisma.user.update({
-      where: { id },
-      data: { isSuperAdmin },
-      select: { id: true, name: true, email: true, isSuperAdmin: true },
-    });
-
-    res.json(updated);
-  } catch (err) {
-    console.error('Toggle super-admin error:', err);
-    res.status(500).json({ error: 'Failed to update super-admin status' });
   }
-});
+);
 
 export default router;

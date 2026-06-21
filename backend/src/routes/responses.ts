@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { assignHosts } from '../services/assignment';
+import prisma from '../db.js';
+import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { assignHosts } from '../services/assignment.js';
 
 const router = Router();
 
@@ -9,7 +9,10 @@ const router = Router();
 router.get('/:id/responses', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const meetingId = parseInt(req.params.id, 10);
-    if (isNaN(meetingId)) { res.status(400).json({ error: 'Invalid meeting id' }); return; }
+    if (isNaN(meetingId)) {
+      res.status(400).json({ error: 'Invalid meeting id' });
+      return;
+    }
 
     const responses = await prisma.response.findMany({
       where: { meetingId },
@@ -38,14 +41,26 @@ router.post('/:id/responses', requireAuth, async (req: AuthRequest, res: Respons
     }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Meeting is frozen' }); return; }
-    if (meeting.deadline < new Date()) { res.status(403).json({ error: 'Deadline has passed' }); return; }
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found' });
+      return;
+    }
+    if (meeting.frozen) {
+      res.status(403).json({ error: 'Meeting is frozen' });
+      return;
+    }
+    if (meeting.deadline < new Date()) {
+      res.status(403).json({ error: 'Deadline has passed' });
+      return;
+    }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
-    if (existing) { res.status(409).json({ error: 'Already responded' }); return; }
+    if (existing) {
+      res.status(409).json({ error: 'Already responded' });
+      return;
+    }
 
     const response = await prisma.response.create({
       data: { meetingId, userId: req.userId!, hostWish },
@@ -73,14 +88,26 @@ router.put('/:id/responses/me', requireAuth, async (req: AuthRequest, res: Respo
     }
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Meeting is frozen' }); return; }
-    if (meeting.deadline < new Date()) { res.status(403).json({ error: 'Deadline has passed' }); return; }
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found' });
+      return;
+    }
+    if (meeting.frozen) {
+      res.status(403).json({ error: 'Meeting is frozen' });
+      return;
+    }
+    if (meeting.deadline < new Date()) {
+      res.status(403).json({ error: 'Deadline has passed' });
+      return;
+    }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
-    if (!existing) { res.status(404).json({ error: 'No response found' }); return; }
+    if (!existing) {
+      res.status(404).json({ error: 'No response found' });
+      return;
+    }
 
     const updated = await prisma.response.update({
       where: { id: existing.id },
@@ -103,13 +130,22 @@ router.delete('/:id/responses/me', requireAuth, async (req: AuthRequest, res: Re
     const meetingId = parseInt(req.params.id, 10);
 
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Meeting is frozen' }); return; }
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found' });
+      return;
+    }
+    if (meeting.frozen) {
+      res.status(403).json({ error: 'Meeting is frozen' });
+      return;
+    }
 
     const existing = await prisma.response.findUnique({
       where: { meetingId_userId: { meetingId, userId: req.userId! } },
     });
-    if (!existing) { res.status(404).json({ error: 'No response found' }); return; }
+    if (!existing) {
+      res.status(404).json({ error: 'No response found' });
+      return;
+    }
 
     await prisma.response.delete({ where: { id: existing.id } });
 

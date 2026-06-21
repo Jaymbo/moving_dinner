@@ -1,4 +1,4 @@
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * RSVP-Token Cleanup (täglich 03:00)
@@ -27,7 +27,9 @@ export async function cleanupRsvpTokens(): Promise<void> {
     },
   });
 
-  console.log(`[TokenCleanup] Deleted ${expired.count} expired tokens, ${oldUsed.count} old used tokens`);
+  console.log(
+    `[TokenCleanup] Deleted ${expired.count} expired tokens, ${oldUsed.count} old used tokens`
+  );
 
   // Clean up password reset tokens
   const expiredPw = await prisma.passwordResetToken.deleteMany({
@@ -47,5 +49,7 @@ export async function cleanupRsvpTokens(): Promise<void> {
     },
   });
 
-  console.log(`[TokenCleanup] Deleted ${expiredPw.count} expired password reset tokens, ${oldUsedPw.count} old used password reset tokens`);
+  console.log(
+    `[TokenCleanup] Deleted ${expiredPw.count} expired password reset tokens, ${oldUsedPw.count} old used password reset tokens`
+  );
 }

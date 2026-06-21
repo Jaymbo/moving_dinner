@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { joinGroupByInviteCode, joinGroupByInvitationCode } from '../services/groups';
+import prisma from '../db.js';
+import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { joinGroupByInviteCode, joinGroupByInvitationCode } from '../services/groups.js';
 
 const router = Router();
 
@@ -11,7 +11,10 @@ router.get('/:code', async (req: AuthRequest, res: Response) => {
     const code = req.params.code;
 
     // Try invitation code first
-    const invitation = await prisma.groupInvitation.findUnique({ where: { code }, include: { group: true } });
+    const invitation = await prisma.groupInvitation.findUnique({
+      where: { code },
+      include: { group: true },
+    });
     if (invitation) {
       // Check if expired
       if (invitation.expiresAt && invitation.expiresAt < new Date()) {
@@ -22,14 +25,24 @@ router.get('/:code', async (req: AuthRequest, res: Response) => {
         res.status(410).json({ error: 'Invitation code has reached its usage limit' });
         return;
       }
-      res.json({ type: 'invitation', group: { id: invitation.group.id, name: invitation.group.name, description: invitation.group.description } });
+      res.json({
+        type: 'invitation',
+        group: {
+          id: invitation.group.id,
+          name: invitation.group.name,
+          description: invitation.group.description,
+        },
+      });
       return;
     }
 
     // Try permanent invite code
     const group = await prisma.group.findUnique({ where: { inviteCode: code } });
     if (group) {
-      res.json({ type: 'invite', group: { id: group.id, name: group.name, description: group.description } });
+      res.json({
+        type: 'invite',
+        group: { id: group.id, name: group.name, description: group.description },
+      });
       return;
     }
 

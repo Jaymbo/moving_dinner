@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
-import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireGroupMember, requireMeetingGroupAdmin } from '../middleware/groupAuth';
-import { generateRsvpTokens } from '../services/rsvp';
-import { notifyGroupNewMeeting } from '../services/email';
+import prisma from '../db.js';
+import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { requireGroupMember, requireMeetingGroupAdmin } from '../middleware/groupAuth.js';
+import { generateRsvpTokens } from '../services/rsvp.js';
+import { notifyGroupNewMeeting } from '../services/email.js';
 
 const router = Router();
 
@@ -32,7 +32,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       });
 
       // Super-admins get 'admin' role for all groups
-      const result = meetings.map(m => ({
+      const result = meetings.map((m) => ({
         ...m,
         userRole: 'admin' as const,
       }));
@@ -45,8 +45,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { userId: req.userId },
       select: { groupId: true, role: true },
     });
-    const groupIds = memberships.map(m => m.groupId);
-    const roleMap = new Map(memberships.map(m => [m.groupId, m.role]));
+    const groupIds = memberships.map((m) => m.groupId);
+    const roleMap = new Map(memberships.map((m) => [m.groupId, m.role]));
 
     const groupId = req.query.group_id ? parseInt(req.query.group_id as string, 10) : undefined;
     if (groupId && !groupIds.includes(groupId)) {
@@ -64,7 +64,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { date: 'asc' },
     });
 
-    const result = meetings.map(m => ({
+    const result = meetings.map((m) => ({
       ...m,
       userRole: roleMap.get(m.groupId) || 'member',
     }));
@@ -97,7 +97,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
         orderBy: { date: 'asc' },
       });
 
-      const result = meetings.map(m => ({
+      const result = meetings.map((m) => ({
         ...m,
         hasResponded: m.responses.length > 0,
         response: m.responses[0] || null,
@@ -113,8 +113,8 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { userId: req.userId },
       select: { groupId: true, role: true },
     });
-    const groupIds = memberships.map(m => m.groupId);
-    const roleMap = new Map(memberships.map(m => [m.groupId, m.role]));
+    const groupIds = memberships.map((m) => m.groupId);
+    const roleMap = new Map(memberships.map((m) => [m.groupId, m.role]));
 
     const meetings = await prisma.meeting.findMany({
       where: {
@@ -129,7 +129,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { date: 'asc' },
     });
 
-    const result = meetings.map(m => ({
+    const result = meetings.map((m) => ({
       ...m,
       hasResponded: m.responses.length > 0,
       response: m.responses[0] || null,
@@ -145,22 +145,27 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/meetings/group/:id – All meetings for a group
-router.get('/group/:id', requireAuth, requireGroupMember, async (req: AuthRequest, res: Response) => {
-  try {
-    const groupId = parseInt(req.params.id, 10);
-    const meetings = await prisma.meeting.findMany({
-      where: { groupId },
-      include: {
-        _count: { select: { responses: true } },
-      },
-      orderBy: { date: 'asc' },
-    });
-    res.json(meetings);
-  } catch (err) {
-    console.error('Group meetings error:', err);
-    res.status(500).json({ error: 'Failed to get group meetings' });
+router.get(
+  '/group/:id',
+  requireAuth,
+  requireGroupMember,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const groupId = parseInt(req.params.id, 10);
+      const meetings = await prisma.meeting.findMany({
+        where: { groupId },
+        include: {
+          _count: { select: { responses: true } },
+        },
+        orderBy: { date: 'asc' },
+      });
+      res.json(meetings);
+    } catch (err) {
+      console.error('Group meetings error:', err);
+      res.status(500).json({ error: 'Failed to get group meetings' });
+    }
   }
-});
+);
 
 // POST /api/meetings/group/:id – Create meeting
 // Permission depends on group's meetingCreation setting: 'admin' or 'all'
@@ -221,7 +226,7 @@ router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) =
 
     await generateRsvpTokens(meeting.id, groupId);
 
-    notifyGroupNewMeeting(groupId, meeting.id, meetingDate, meetingDeadline).catch(err =>
+    notifyGroupNewMeeting(groupId, meeting.id, meetingDate, meetingDeadline).catch((err) =>
       console.error('Failed to send meeting notifications:', err)
     );
 
@@ -236,16 +241,24 @@ router.post('/group/:id', requireAuth, async (req: AuthRequest, res: Response) =
 router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid id' });
+      return;
+    }
 
     const meeting = await prisma.meeting.findUnique({
       where: { id },
       include: {
         group: { select: { id: true, name: true, meetingCreation: true } },
-        responses: { include: { user: { select: { id: true, name: true, diet: true, address: true } } } },
+        responses: {
+          include: { user: { select: { id: true, name: true, diet: true, address: true } } },
+        },
       },
     });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found' });
+      return;
+    }
 
     // Check if user is super-admin
     const currentUser = await prisma.user.findUnique({
@@ -275,44 +288,66 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // PUT /api/meetings/:id – Edit meeting (group admin only)
-router.put('/:id', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const { date, deadline } = req.body;
+router.put(
+  '/:id',
+  requireAuth,
+  requireMeetingGroupAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { date, deadline } = req.body;
 
-    const meeting = await prisma.meeting.findUnique({ where: { id } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Meeting is frozen' }); return; }
+      const meeting = await prisma.meeting.findUnique({ where: { id } });
+      if (!meeting) {
+        res.status(404).json({ error: 'Meeting not found' });
+        return;
+      }
+      if (meeting.frozen) {
+        res.status(403).json({ error: 'Meeting is frozen' });
+        return;
+      }
 
-    const updated = await prisma.meeting.update({
-      where: { id },
-      data: {
-        ...(date !== undefined && { date: new Date(date) }),
-        ...(deadline !== undefined && { deadline: new Date(deadline) }),
-      },
-    });
-    res.json(updated);
-  } catch (err) {
-    console.error('Update meeting error:', err);
-    res.status(500).json({ error: 'Failed to update meeting' });
+      const updated = await prisma.meeting.update({
+        where: { id },
+        data: {
+          ...(date !== undefined && { date: new Date(date) }),
+          ...(deadline !== undefined && { deadline: new Date(deadline) }),
+        },
+      });
+      res.json(updated);
+    } catch (err) {
+      console.error('Update meeting error:', err);
+      res.status(500).json({ error: 'Failed to update meeting' });
+    }
   }
-});
+);
 
 // DELETE /api/meetings/:id (group admin only)
-router.delete('/:id', requireAuth, requireMeetingGroupAdmin, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id, 10);
+router.delete(
+  '/:id',
+  requireAuth,
+  requireMeetingGroupAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id, 10);
 
-    const meeting = await prisma.meeting.findUnique({ where: { id } });
-    if (!meeting) { res.status(404).json({ error: 'Meeting not found' }); return; }
-    if (meeting.frozen) { res.status(403).json({ error: 'Cannot delete frozen meeting' }); return; }
+      const meeting = await prisma.meeting.findUnique({ where: { id } });
+      if (!meeting) {
+        res.status(404).json({ error: 'Meeting not found' });
+        return;
+      }
+      if (meeting.frozen) {
+        res.status(403).json({ error: 'Cannot delete frozen meeting' });
+        return;
+      }
 
-    await prisma.meeting.delete({ where: { id } });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Delete meeting error:', err);
-    res.status(500).json({ error: 'Failed to delete meeting' });
+      await prisma.meeting.delete({ where: { id } });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Delete meeting error:', err);
+      res.status(500).json({ error: 'Failed to delete meeting' });
+    }
   }
-});
+);
 
 export default router;

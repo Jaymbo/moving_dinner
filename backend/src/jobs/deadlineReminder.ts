@@ -1,5 +1,5 @@
-import prisma from '../db';
-import { sendDeadlineReminder } from '../services/email';
+import prisma from '../db.js';
+import { sendDeadlineReminder } from '../services/email.js';
 
 /**
  * P4 – Deadline-Erinnerung (täglich 09:00)

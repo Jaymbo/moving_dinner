@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import prisma from '../db';
-import { AuthRequest } from './auth';
+import prisma from '../db.js';
+import { AuthRequest } from './auth.js';
 
 /**
  * Checks that the authenticated user is an admin of the group specified by :groupId param.
@@ -75,7 +75,11 @@ export async function requireGroupMember(req: AuthRequest, res: Response, next: 
  * The meeting is specified by :id param (meeting id).
  * Super-admins bypass this check.
  */
-export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+export async function requireMeetingGroupAdmin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
   const meetingId = parseInt(req.params.id, 10);
   if (isNaN(meetingId)) {
     res.status(400).json({ error: 'Invalid meeting id' });
@@ -94,7 +98,10 @@ export async function requireMeetingGroupAdmin(req: AuthRequest, res: Response, 
     next();
     return;
   }
-  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId }, select: { groupId: true } });
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
+    select: { groupId: true },
+  });
   if (!meeting) {
     res.status(404).json({ error: 'Meeting not found' });
     return;

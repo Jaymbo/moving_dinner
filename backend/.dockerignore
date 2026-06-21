@@ -1,6 +1,12 @@
 node_modules
 dist
-*.env
-.env*
-.git
-.gitignore
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode
+.idea
+*.log
+prisma/migrations/*.sql
+coverage
+.nyc_output

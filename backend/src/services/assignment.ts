@@ -1,4 +1,4 @@
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * Host-Zuweisungsalgorithmus (portiert aus update Host verteilung.gs)
@@ -21,8 +21,8 @@ const DEFAULT_MAX_GUESTS = 2;
 function hashString(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) + h) + s.charCodeAt(i);
-    h = h & 0xFFFFFFFF;
+    h = (h << 5) + h + s.charCodeAt(i);
+    h = h & 0xffffffff;
   }
   return h >>> 0;
 }
@@ -58,18 +58,15 @@ export async function assignHosts(meetingId: number): Promise<void> {
 
   // Load scores for all participants in this group
   const groupId = meeting.groupId;
-  const userIds = meeting.responses.map(r => r.userId);
+  const userIds = meeting.responses.map((r) => r.userId);
   const scores = await prisma.score.findMany({ where: { userId: { in: userIds }, groupId } });
-  const scoreMap = new Map(scores.map(s => [s.userId, Number(s.score)]));
+  const scoreMap = new Map(scores.map((s) => [s.userId, Number(s.score)]));
 
   // Load meetup matrix for all participants in this group
   const matrixEntries = await prisma.meetupMatrix.findMany({
     where: {
       groupId,
-      OR: [
-        { userAId: { in: userIds } },
-        { userBId: { in: userIds } },
-      ],
+      OR: [{ userAId: { in: userIds } }, { userBId: { in: userIds } }],
     },
   });
 
@@ -86,7 +83,7 @@ export async function assignHosts(meetingId: number): Promise<void> {
   }
 
   // Build participant data
-  const participants: Participant[] = meeting.responses.map(r => ({
+  const participants: Participant[] = meeting.responses.map((r) => ({
     userId: r.userId,
     name: r.user.name,
     hostWish: r.hostWish as 'will_host' | 'indifferent' | 'cannot_host',
@@ -101,7 +98,7 @@ export async function assignHosts(meetingId: number): Promise<void> {
   }));
 
   // === 1. Host-Selektion ===
-  const candidateScores = participants.map(p => {
+  const candidateScores = participants.map((p) => {
     let adjusted: number;
     if (p.hostWish === 'will_host') adjusted = HIGH_SCORE + p.score;
     else if (p.hostWish === 'cannot_host') adjusted = LOW_SCORE + p.score;
@@ -152,41 +149,47 @@ export async function assignHosts(meetingId: number): Promise<void> {
   }
 
   // === 2. FairShare-Anpassung ===
-  const guests = participants.filter(p => !p.isHost);
+  const guests = participants.filter((p) => !p.isHost);
   const totalGuestsToAssignPre = guests.length;
   const fairShare = Math.ceil(totalGuestsToAssignPre / hosts.length);
-  hosts.forEach(h => {
+  hosts.forEach((h) => {
     if (h.maxGuests < fairShare) {
       h.maxGuests = fairShare;
     }
   });
 
   // === 3. minQuota / targetQuota ===
-  const totalGuests = participants.filter(p => !p.isHost).length;
-  const caps = hosts.map(h => h.maxGuests);
+  const totalGuests = participants.filter((p) => !p.isHost).length;
+  const caps = hosts.map((h) => h.maxGuests);
   const H = hosts.length;
 
   // minQuota
-  let minBase = H > 0 ? Math.floor(totalGuests / H) : 0;
-  let minQuotas = hosts.map((h, i) => Math.min(caps[i], minBase));
-  let minSum = minQuotas.reduce((a, b) => a + b, 0);
+  const minBase = H > 0 ? Math.floor(totalGuests / H) : 0;
+  const minQuotas = hosts.map((h, i) => Math.min(caps[i], minBase));
+  const minSum = minQuotas.reduce((a, b) => a + b, 0);
   let minRemaining = Math.max(0, totalGuests - minSum);
   let minIdx = 0;
   while (minRemaining > 0 && minIdx < hosts.length * 1000) {
     const i = minIdx % hosts.length;
-    if (minQuotas[i] < caps[i]) { minQuotas[i]++; minRemaining--; }
+    if (minQuotas[i] < caps[i]) {
+      minQuotas[i]++;
+      minRemaining--;
+    }
     minIdx++;
   }
 
   // targetQuota
-  let targetBase = H > 0 ? Math.ceil(totalGuests / H) : 0;
-  let quotas = hosts.map((h, i) => Math.min(caps[i], targetBase));
-  let assignedQuotaSum = quotas.reduce((a, b) => a + b, 0);
+  const targetBase = H > 0 ? Math.ceil(totalGuests / H) : 0;
+  const quotas = hosts.map((h, i) => Math.min(caps[i], targetBase));
+  const assignedQuotaSum = quotas.reduce((a, b) => a + b, 0);
   let remaining = Math.max(0, totalGuests - assignedQuotaSum);
   let idx = 0;
   while (remaining > 0 && idx < hosts.length * 1000) {
     const i = idx % hosts.length;
-    if (quotas[i] < caps[i]) { quotas[i]++; remaining--; }
+    if (quotas[i] < caps[i]) {
+      quotas[i]++;
+      remaining--;
+    }
     idx++;
   }
 
@@ -217,7 +220,7 @@ export async function assignHosts(meetingId: number): Promise<void> {
     // Phase 1: minQuota
     for (const g of guests) {
       if (g.assignedTo) continue;
-      const minQuotaCandidates = hosts.filter(h => h.assignedGuests < h.minQuota);
+      const minQuotaCandidates = hosts.filter((h) => h.assignedGuests < h.minQuota);
       if (minQuotaCandidates.length === 0) break;
 
       let bestHost: Participant | null = null;
@@ -227,7 +230,10 @@ export async function assignHosts(meetingId: number): Promise<void> {
         const remainingCap = h.maxGuests - h.assignedGuests;
         const tieBreaker = -remainingCap * 0.001;
         const finalScore = score + tieBreaker;
-        if (finalScore < bestScore) { bestScore = finalScore; bestHost = h; }
+        if (finalScore < bestScore) {
+          bestScore = finalScore;
+          bestHost = h;
+        }
       }
 
       if (bestHost) {
@@ -240,7 +246,7 @@ export async function assignHosts(meetingId: number): Promise<void> {
     // Phase 2: targetQuota
     for (const g of guests) {
       if (g.assignedTo) continue;
-      const targetCandidates = hosts.filter(h => h.assignedGuests < h.targetQuota);
+      const targetCandidates = hosts.filter((h) => h.assignedGuests < h.targetQuota);
       if (targetCandidates.length === 0) {
         g.assignedTo = 'unassigned';
         continue;
@@ -253,7 +259,10 @@ export async function assignHosts(meetingId: number): Promise<void> {
         const remainingCap = h.maxGuests - h.assignedGuests;
         const tieBreaker = -remainingCap * 0.001;
         const finalScore = score + tieBreaker;
-        if (finalScore < bestScore) { bestScore = finalScore; bestHost = h; }
+        if (finalScore < bestScore) {
+          bestScore = finalScore;
+          bestHost = h;
+        }
       }
 
       if (bestHost) {
@@ -303,11 +312,13 @@ export async function assignHosts(meetingId: number): Promise<void> {
   }
 
   // Hosts themselves: assignedTo = their own name (they are hosting)
-  hosts.forEach(h => { h.assignedTo = h.name; });
+  hosts.forEach((h) => {
+    h.assignedTo = h.name;
+  });
 
   // === Write assignments to DB ===
   for (const p of participants) {
-    const response = meeting.responses.find(r => r.userId === p.userId);
+    const response = meeting.responses.find((r) => r.userId === p.userId);
     if (!response) continue;
 
     // Find the assigned host's userId
@@ -315,7 +326,7 @@ export async function assignHosts(meetingId: number): Promise<void> {
     if (p.isHost) {
       assignedHostId = p.userId; // host is assigned to themselves
     } else if (p.assignedTo && p.assignedTo !== 'unassigned') {
-      const hostParticipant = participants.find(pp => pp.name === p.assignedTo);
+      const hostParticipant = participants.find((pp) => pp.name === p.assignedTo);
       if (hostParticipant) assignedHostId = hostParticipant.userId;
     }
 

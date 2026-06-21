@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * Generate RSVP tokens for all group members of a meeting's group.
@@ -53,9 +53,17 @@ export async function validateRsvpToken(token: string): Promise<{
 
   if (!rsvpToken) return { valid: false };
 
-  if (rsvpToken.used) return { valid: false, alreadyUsed: true, meetingId: rsvpToken.meetingId, userId: rsvpToken.userId };
-  if (rsvpToken.expiresAt && rsvpToken.expiresAt < new Date()) return { valid: false, expired: true };
-  if (rsvpToken.meeting.frozen) return { valid: false, frozen: true, meetingId: rsvpToken.meetingId };
+  if (rsvpToken.used)
+    return {
+      valid: false,
+      alreadyUsed: true,
+      meetingId: rsvpToken.meetingId,
+      userId: rsvpToken.userId,
+    };
+  if (rsvpToken.expiresAt && rsvpToken.expiresAt < new Date())
+    return { valid: false, expired: true };
+  if (rsvpToken.meeting.frozen)
+    return { valid: false, frozen: true, meetingId: rsvpToken.meetingId };
   if (rsvpToken.meeting.deadline < new Date()) return { valid: false, expired: true };
 
   return {
@@ -71,7 +79,10 @@ export async function validateRsvpToken(token: string): Promise<{
 /**
  * Process an RSVP submission via token.
  */
-export async function processRsvp(token: string, hostWish: 'will_host' | 'indifferent' | 'cannot_host'): Promise<{ success: boolean; error?: string }> {
+export async function processRsvp(
+  token: string,
+  hostWish: 'will_host' | 'indifferent' | 'cannot_host'
+): Promise<{ success: boolean; error?: string }> {
   const validation = await validateRsvpToken(token);
   if (!validation.valid) {
     if (validation.alreadyUsed) return { success: false, error: 'Token already used' };

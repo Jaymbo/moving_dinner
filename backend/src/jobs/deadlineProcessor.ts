@@ -1,8 +1,8 @@
-import prisma from '../db';
-import { assignHosts } from '../services/assignment';
-import { sendAssignmentEmails } from '../services/email';
-import { recalculateAllScores } from '../services/scoring';
-import { recalculateAllMatrix } from '../services/matrix';
+import prisma from '../db.js';
+import { assignHosts } from '../services/assignment.js';
+import { sendAssignmentEmails } from '../services/email.js';
+import { recalculateAllScores } from '../services/scoring.js';
+import { recalculateAllMatrix } from '../services/matrix.js';
 
 /**
  * P5 – Deadline-Verarbeitung (alle 30 Min)
@@ -31,7 +31,7 @@ export async function processDeadlines(): Promise<void> {
       console.log(`[DeadlineProcessor] Processing meeting ${meeting.id} (${meeting.date})`);
 
       // Run assignment if not already assigned
-      const hasUnassigned = meeting.responses.some(r => r.assignedHost === null);
+      const hasUnassigned = meeting.responses.some((r) => r.assignedHost === null);
       if (hasUnassigned) {
         await assignHosts(meeting.id);
       }

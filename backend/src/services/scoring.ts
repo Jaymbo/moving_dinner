@@ -1,4 +1,4 @@
-import prisma from '../db';
+import prisma from '../db.js';
 
 /**
  * Recalculate scores for a specific group from frozen meetings.
@@ -16,10 +16,13 @@ export async function recalculateScoresForGroup(groupId: number): Promise<void> 
     where: { groupId },
     select: { userId: true },
   });
-  const memberIds = members.map(m => m.userId);
+  const memberIds = members.map((m) => m.userId);
 
   // Build aggregation map
-  const stats = new Map<number, { participations: number; hostings: number; hostedGuests: number }>();
+  const stats = new Map<
+    number,
+    { participations: number; hostings: number; hostedGuests: number }
+  >();
   for (const userId of memberIds) {
     stats.set(userId, { participations: 0, hostings: 0, hostedGuests: 0 });
   }
@@ -37,10 +40,7 @@ export async function recalculateScoresForGroup(groupId: number): Promise<void> 
       }
 
       // Count every guest ever assigned to this user as host across all frozen meetings.
-      if (
-        response.assignedHost !== null &&
-        response.assignedHost !== response.userId
-      ) {
+      if (response.assignedHost !== null && response.assignedHost !== response.userId) {
         const hostStat = stats.get(response.assignedHost);
         if (hostStat) {
           hostStat.hostedGuests++;
@@ -52,7 +52,10 @@ export async function recalculateScoresForGroup(groupId: number): Promise<void> 
   // Write to scores table (upsert per group)
   for (const userId of memberIds) {
     const s = stats.get(userId)!;
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { maxGuests: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { maxGuests: true },
+    });
     const maxGuests = user?.maxGuests || 0;
     const rawScore = s.participations - s.hostings - s.hostedGuests;
     const adjustedScore = maxGuests > 0 ? rawScore / maxGuests : rawScore;
