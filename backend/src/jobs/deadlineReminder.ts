@@ -1,5 +1,6 @@
 import prisma from '../db.js';
 import { sendDeadlineReminder } from '../services/email.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * P4 – Deadline-Erinnerung (täglich 09:00)
@@ -20,14 +21,16 @@ export async function sendPreDeadlineReminders(): Promise<void> {
     },
   });
 
-  console.log(`[DeadlineReminder] Found ${meetings.length} meetings with upcoming deadlines`);
+  logger.info(`[DeadlineReminder] Found ${meetings.length} meetings with upcoming deadlines`);
 
   for (const meeting of meetings) {
     try {
       await sendDeadlineReminder(meeting.id, meeting.date, meeting.deadline);
-      console.log(`[DeadlineReminder] Sent reminders for meeting ${meeting.id}`);
+      logger.info(`[DeadlineReminder] Sent reminders for meeting ${meeting.id}`);
     } catch (err) {
-      console.error(`[DeadlineReminder] Failed for meeting ${meeting.id}:`, err);
+      logger.error(`[DeadlineReminder] Failed for meeting ${meeting.id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }

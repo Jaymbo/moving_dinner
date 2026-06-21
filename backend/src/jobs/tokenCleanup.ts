@@ -1,4 +1,5 @@
 import prisma from '../db.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * RSVP-Token Cleanup (täglich 03:00)
@@ -27,7 +28,7 @@ export async function cleanupRsvpTokens(): Promise<void> {
     },
   });
 
-  console.log(
+  logger.info(
     `[TokenCleanup] Deleted ${expired.count} expired tokens, ${oldUsed.count} old used tokens`
   );
 
@@ -49,7 +50,7 @@ export async function cleanupRsvpTokens(): Promise<void> {
     },
   });
 
-  console.log(
+  logger.info(
     `[TokenCleanup] Deleted ${expiredPw.count} expired password reset tokens, ${oldUsedPw.count} old used password reset tokens`
   );
 }

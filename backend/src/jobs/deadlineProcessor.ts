@@ -3,6 +3,7 @@ import { assignHosts } from '../services/assignment.js';
 import { sendAssignmentEmails } from '../services/email.js';
 import { recalculateAllScores } from '../services/scoring.js';
 import { recalculateAllMatrix } from '../services/matrix.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * P5 – Deadline-Verarbeitung (alle 30 Min)
@@ -22,13 +23,13 @@ export async function processDeadlines(): Promise<void> {
     include: { responses: true },
   });
 
-  console.log(`[DeadlineProcessor] Found ${meetings.length} meetings past deadline`);
+  logger.info(`[DeadlineProcessor] Found ${meetings.length} meetings past deadline`);
 
   let somethingChanged = false;
 
   for (const meeting of meetings) {
     try {
-      console.log(`[DeadlineProcessor] Processing meeting ${meeting.id} (${meeting.date})`);
+      logger.info(`[DeadlineProcessor] Processing meeting ${meeting.id} (${meeting.date})`);
 
       // Run assignment if not already assigned
       const hasUnassigned = meeting.responses.some((r) => r.assignedHost === null);
@@ -46,9 +47,11 @@ export async function processDeadlines(): Promise<void> {
       });
 
       somethingChanged = true;
-      console.log(`[DeadlineProcessor] Froze meeting ${meeting.id}`);
+      logger.info(`[DeadlineProcessor] Froze meeting ${meeting.id}`);
     } catch (err) {
-      console.error(`[DeadlineProcessor] Failed for meeting ${meeting.id}:`, err);
+      logger.error(`[DeadlineProcessor] Failed for meeting ${meeting.id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -56,16 +59,20 @@ export async function processDeadlines(): Promise<void> {
   if (somethingChanged) {
     try {
       await recalculateAllScores();
-      console.log('[DeadlineProcessor] Recalculated scores');
+      logger.info('[DeadlineProcessor] Recalculated scores');
     } catch (err) {
-      console.error('[DeadlineProcessor] Failed to recalculate scores:', err);
+      logger.error('[DeadlineProcessor] Failed to recalculate scores', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     try {
       await recalculateAllMatrix();
-      console.log('[DeadlineProcessor] Recalculated meetup matrix');
+      logger.info('[DeadlineProcessor] Recalculated meetup matrix');
     } catch (err) {
-      console.error('[DeadlineProcessor] Failed to recalculate matrix:', err);
+      logger.error('[DeadlineProcessor] Failed to recalculate matrix', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }

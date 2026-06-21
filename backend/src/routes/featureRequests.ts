@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../db.js';
 import { requireAuth, requireSuperAdmin, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -30,7 +31,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(request);
   } catch (err) {
-    console.error('Create feature request error:', err);
+    logger.error('Create feature request error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to create feature request' });
   }
 });
@@ -54,7 +57,9 @@ router.get('/', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Re
 
     res.json(requests);
   } catch (err) {
-    console.error('List feature requests error:', err);
+    logger.error('List feature requests error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to list feature requests' });
   }
 });
@@ -69,7 +74,9 @@ router.get('/my', requireAuth, async (req: AuthRequest, res: Response) => {
 
     res.json(requests);
   } catch (err) {
-    console.error('My feature requests error:', err);
+    logger.error('My feature requests error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to get feature requests' });
   }
 });
@@ -111,12 +118,14 @@ router.patch('/:id', requireAuth, requireSuperAdmin, async (req: AuthRequest, re
 
     res.json(updated);
   } catch (err) {
-    console.error('Update feature request error:', err);
+    logger.error('Update feature request error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to update feature request' });
   }
 });
 
-// DELETE /api/feature-requests/:id - Delete a feature request (Super-Admin only, or owner can delete their own)
+// DELETE /api/feature-requests/:id - Delete a feature request
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -146,7 +155,9 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     await prisma.featureRequest.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
-    console.error('Delete feature request error:', err);
+    logger.error('Delete feature request error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to delete feature request' });
   }
 });

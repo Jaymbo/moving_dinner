@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../db.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { joinGroupByInviteCode, joinGroupByInvitationCode } from '../services/groups.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -48,7 +49,9 @@ router.get('/:code', async (req: AuthRequest, res: Response) => {
 
     res.status(404).json({ error: 'Invalid code' });
   } catch (err) {
-    console.error('Join lookup error:', err);
+    logger.error('Join lookup error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to look up code' });
   }
 });
@@ -79,7 +82,9 @@ router.post('/:code', requireAuth, async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: result.error });
     }
   } catch (err) {
-    console.error('Join error:', err);
+    logger.error('Join error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to join group' });
   }
 });

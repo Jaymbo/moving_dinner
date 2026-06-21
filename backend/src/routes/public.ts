@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import prisma from '../db.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -20,7 +21,9 @@ router.get('/meetings/active', async (_req, res: Response) => {
     });
     res.json(meetings);
   } catch (err) {
-    console.error('Public meetings error:', err);
+    logger.error('Public meetings error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to get active meetings' });
   }
 });
@@ -108,7 +111,9 @@ router.post('/meetings/:id/register', async (req, res: Response) => {
 
     res.status(201).json({ success: true, userId: user.id, isGuest: user.isGuest });
   } catch (err) {
-    console.error('Guest registration error:', err);
+    logger.error('Guest registration error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to register' });
   }
 });

@@ -7,6 +7,7 @@ import { recalculateAllScores } from '../services/scoring.js';
 import { recalculateAllMatrix } from '../services/matrix.js';
 import { sendAssignmentEmails, sendDeadlineReminder, sendMail } from '../services/email.js';
 import { generateRsvpTokens } from '../services/rsvp.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.post('/test-email', requireAuth, async (req: AuthRequest, res: Response) 
     const success = await sendMail({
       to,
       subject: 'Moving Dinner – Test-E-Mail',
-      body: `Hallo!\n\nDas ist eine Test-E-Mail von deiner Moving Dinner App.\n\nWenn du diese Nachricht erhältst, funktioniert der SMTP-Versand korrekt! 🎉\n\nGesendet an: ${to}\nZeitstempel: ${new Date().toLocaleString('de-DE')}\n\nViele Grüße,\nMoving Dinner`,
+      body: `Hallo!\n\nDas ist eine Test-E-Mail von deiner Moving Dinner App.\n\nWenn du diese Nachricht erhältst, funktioniert der SMTP-Versand korrekt!\n\nGesendet an: ${to}\nZeitstempel: ${new Date().toLocaleString('de-DE')}\n\nViele Grüße,\nMoving Dinner`,
     });
 
     if (success) {
@@ -31,7 +32,9 @@ router.post('/test-email', requireAuth, async (req: AuthRequest, res: Response) 
       res.status(500).json({ error: 'Failed to send test email – check server logs' });
     }
   } catch (err) {
-    console.error('Test email error:', err);
+    logger.error('Test email error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to send test email' });
   }
 });
@@ -83,7 +86,9 @@ router.post(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Freeze error:', err);
+      logger.error('Freeze error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       res.status(500).json({ error: 'Failed to freeze meeting' });
     }
   }
@@ -116,7 +121,9 @@ router.post(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Remind error:', err);
+      logger.error('Remind error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       res.status(500).json({ error: 'Failed to send reminders' });
     }
   }
@@ -133,7 +140,9 @@ router.post(
       await recalculateAllMatrix();
       res.json({ success: true });
     } catch (err) {
-      console.error('Recalculate error:', err);
+      logger.error('Recalculate error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       res.status(500).json({ error: 'Failed to recalculate scores' });
     }
   }
@@ -167,7 +176,9 @@ router.post(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Send RSVP error:', err);
+      logger.error('Send RSVP error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       res.status(500).json({ error: 'Failed to send RSVP emails' });
     }
   }

@@ -224,8 +224,11 @@ router.post(
 
     await generateRsvpTokens(meeting.id, groupId);
 
+    const { logger } = await import('../utils/logger.js');
     notifyGroupNewMeeting(groupId, meeting.id, meetingDate, meetingDeadline).catch((err) =>
-      console.error('Failed to send meeting notifications:', err)
+      logger.error('Failed to send meeting notifications', {
+        error: err instanceof Error ? err.message : String(err),
+      })
     );
 
     res.status(201).json(meeting);
