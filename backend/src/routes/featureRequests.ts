@@ -47,11 +47,13 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // GET /api/feature-requests - List all feature requests (Super-Admin only)
 router.get('/', requireAuth, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const { status, type } = req.query;
+    const query = req.query as Record<string, string | string[] | undefined>;
+    const status = query.status;
+    const type = query.type;
 
     const where: { status?: string; type?: string } = {};
-    if (status && (typeof status === 'string' || Array.isArray(status))) where.status = Array.isArray(status) ? status[0] : status;
-    if (type && (typeof type === 'string' || Array.isArray(type))) where.type = Array.isArray(type) ? type[0] : type;
+    if (status) where.status = Array.isArray(status) ? status[0] : status;
+    if (type) where.type = Array.isArray(type) ? type[0] : type;
 
     const requests = await prisma.featureRequest.findMany({
       where,

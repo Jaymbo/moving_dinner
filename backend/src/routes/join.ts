@@ -9,12 +9,16 @@ const router = Router();
 // GET /api/join/:code – Group info before joining
 router.get('/:code', async (req: AuthRequest, res: Response) => {
   try {
-    const code = req.params.code;
+    const params = req.params as Record<string, string | string[]>;
+    const code = Array.isArray(params.code) ? params.code[0] : params.code;
+    if (!code) {
+      res.status(400).json({ error: 'Code is required' });
+      return;
+    }
 
     // Try invitation code first
     const invitation = await prisma.groupInvitation.findUnique({
       where: { code },
-      include: { group: true },
     });
     if (invitation) {
       // Check if expired
@@ -26,13 +30,15 @@ router.get('/:code', async (req: AuthRequest, res: Response) => {
         res.status(410).json({ error: 'Invitation code has reached its usage limit' });
         return;
       }
+      const group = await prisma.group.findUnique({
+        where: { id: invitation.groupId },
+        select: { id: true, name: true, description: true },
+      });
       res.json({
         type: 'invitation',
-        group: {
-          id: invitation.group.id,
-          name: invitation.group.name,
-          description: invitation.group.description,
-        },
+        group: group
+          ? { id: group.id, name: group.name, description: group.description }
+          : null,
       });
       return;
     }
@@ -59,7 +65,12 @@ router.get('/:code', async (req: AuthRequest, res: Response) => {
 // POST /api/join/:code – Join group
 router.post('/:code', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const code = req.params.code;
+    const params = req.params as Record<string, string | string[]>;
+    const code = Array.isArray(params.code) ? params.code[0] : params.code;
+    if (!code) {
+      res.status(400).json({ error: 'Code is required' });
+      return;
+    }
     const userId = req.userId!;
 
     // Try invitation code first
