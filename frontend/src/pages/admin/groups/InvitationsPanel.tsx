@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { groups } from '../../../api/client';
-import { getJoinLink, CopyButton } from './utils';
+import CopyButton from './CopyButton';
+import { getJoinLink } from './groupUtils';
 
 interface InvitationsPanelProps {
   groupId: number;

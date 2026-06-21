@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { meetings, admin } from '../../../api/client';
 
@@ -13,11 +13,7 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
   const [groupMeetings, setGroupMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadMeetings();
-  }, [groupId]);
-
-  async function loadMeetings() {
+  const loadMeetings = useCallback(async () => {
     setLoading(true);
     try {
       const data = await meetings.groupMeetings(groupId);
@@ -27,7 +23,15 @@ export default function GroupMeetingsPanel({ groupId, isAdmin, onMessage, onErro
     } finally {
       setLoading(false);
     }
-  }
+  }, [groupId, onError]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadMeetings();
+  }, [loadMeetings]);
 
   async function handleDelete(meetingId: number) {
     if (!confirm('Treffen wirklich löschen? Alle Anmeldungen werden gelöscht!')) return;

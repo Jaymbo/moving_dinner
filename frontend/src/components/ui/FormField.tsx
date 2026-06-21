@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import React, { useId, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 type InputLike =
   | ({ as?: 'input' } & InputHTMLAttributes<HTMLInputElement>)
@@ -13,7 +13,8 @@ interface BaseFormFieldProps {
 }
 
 export default function FormField({ label, id, hint, error, ...inputProps }: BaseFormFieldProps & InputLike) {
-  const inputId = id || `field-${Math.random().toString(36).slice(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || generatedId;
   const describedBy = [hint ? `${inputId}-hint` : '', error ? `${inputId}-error` : ''].filter(Boolean).join(' ') || undefined;
 
   const renderInput = () => {
@@ -25,14 +26,14 @@ export default function FormField({ label, id, hint, error, ...inputProps }: Bas
     };
 
     if (inputProps.as === 'select') {
-      const { as, ...rest } = inputProps;
+      const { as: _as, ...rest } = inputProps;
       return <select {...baseProps} {...rest} />;
     }
     if (inputProps.as === 'textarea') {
-      const { as, ...rest } = inputProps;
+      const { as: _as, ...rest } = inputProps;
       return <textarea {...baseProps} {...rest} />;
     }
-    const { as, ...rest } = inputProps as { as?: 'input' } & InputHTMLAttributes<HTMLInputElement>;
+    const { as: _as, ...rest } = inputProps as { as?: 'input' } & InputHTMLAttributes<HTMLInputElement>;
     return <input {...baseProps} {...rest} />;
   };
 

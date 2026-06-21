@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { auth, setToken } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../context/useAuth';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
 import FormField from '../components/ui/FormField';

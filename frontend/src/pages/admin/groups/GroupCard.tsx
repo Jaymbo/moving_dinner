@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { groups } from '../../../api/client';
-import { useAuth } from '../../../context/AuthContext';
-import { CopyButton, getJoinLink, getMyRole, isActualMember } from './utils';
+import useAuth from '../../../context/useAuth';
+import CopyButton from './CopyButton';
+import { getJoinLink, getMyRole, isActualMember } from './groupUtils';
 import GroupMembersTable from './GroupMembersTable';
 import InvitationsPanel from './InvitationsPanel';
 import GroupScoresPanel from './GroupScoresPanel';

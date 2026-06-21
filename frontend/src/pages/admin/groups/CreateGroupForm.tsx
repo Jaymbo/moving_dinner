@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { groups } from '../../../api/client';
-import { getJoinLink } from './utils';
+import { getJoinLink } from './groupUtils';
 
 interface CreateGroupFormProps {
   onCreated: () => void;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { groups } from '../api/client';
 
@@ -26,11 +26,7 @@ export default function MeetupMatrixPage() {
   const [xFilter, setXFilter] = useState('');
   const [yFilter, setYFilter] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -47,7 +43,16 @@ export default function MeetupMatrixPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadData();
+  }, [loadData]);
+
 
   function getUserName(s: ScoreItem): string {
     return s.user?.name || s.userName || `User ${s.userId}`;

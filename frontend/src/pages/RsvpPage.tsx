@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { rsvp } from '../api/client';
 
@@ -11,9 +11,7 @@ export default function RsvpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => { lookupToken(); }, [token]);
-
-  async function lookupToken() {
+  const lookupToken = useCallback(async () => {
     if (!token) return;
     try {
       const data = await rsvp.lookup(token);
@@ -22,12 +20,20 @@ export default function RsvpPage() {
       } else {
         setRsvpInfo({ valid: false, reason: data.reason });
       }
-    } catch (err: any) {
+    } catch {
       setError('Ungültiger oder abgelaufener Anmelde-Link');
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void lookupToken();
+  }, [lookupToken]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

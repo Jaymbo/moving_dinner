@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { featureRequests } from '../api/client';
 
 export default function FeatureRequestChatWidget() {
@@ -14,19 +14,7 @@ export default function FeatureRequestChatWidget() {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (open && tab === 'my') {
-      loadMyRequests();
-    }
-  }, [open, tab]);
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [myRequests]);
-
-  async function loadMyRequests() {
+  const loadMyRequests = useCallback(async () => {
     setLoadingRequests(true);
     try {
       const data = await featureRequests.my();
@@ -36,7 +24,22 @@ export default function FeatureRequestChatWidget() {
     } finally {
       setLoadingRequests(false);
     }
-  }
+  }, []);
+
+  const initialLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (open && tab === 'my' && !initialLoadRef.current) {
+      initialLoadRef.current = true;
+      loadMyRequests();
+    }
+  }, [open, tab, loadMyRequests]);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [myRequests]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

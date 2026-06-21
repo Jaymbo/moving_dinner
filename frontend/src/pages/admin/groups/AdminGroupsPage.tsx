@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { groups } from '../../../api/client';
-import { useAuth } from '../../../context/AuthContext';
+import useAuth from '../../../context/useAuth';
 import CreateGroupForm from './CreateGroupForm';
 import JoinGroupForm from './JoinGroupForm';
 import GroupCard from './GroupCard';
 import EditGroupForm from './EditGroupForm';
 
 export default function AdminGroupsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [myGroups, setMyGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

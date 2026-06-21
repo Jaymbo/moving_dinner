@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { publicApi } from '../api/client';
 
@@ -15,9 +15,7 @@ export default function PublicRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => { loadMeeting(); }, [meetingId]);
-
-  async function loadMeeting() {
+  const loadMeeting = useCallback(async () => {
     try {
       const meetings = await publicApi.activeMeetings();
       const found = meetings.find((m: any) => m.id === parseInt(meetingId || ''));
@@ -31,7 +29,15 @@ export default function PublicRegisterPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [meetingId]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadMeeting();
+  }, [loadMeeting]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import useAuth from '../context/useAuth';
 import { users, auth } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
@@ -34,15 +34,10 @@ export default function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
-
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
+    if (!user) return;
     try {
-      const data = await users.get(user!.id);
+      const data = await users.get(user.id);
       setName(data.name || '');
       setAddress(data.address || '');
       setMaxGuests(data.maxGuests || 0);
@@ -51,7 +46,15 @@ export default function ProfilePage() {
     } catch (err: any) {
       setError(err.message);
     }
-  }
+  }, [user]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadProfile();
+  }, [loadProfile]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

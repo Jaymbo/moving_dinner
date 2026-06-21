@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { meetings, assignment } from '../api/client';
 
@@ -13,9 +13,7 @@ export default function AdminAssignmentPage() {
   const [assigning, setAssigning] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadData(); }, [meetingId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     if (!meetingId) return;
     try {
       const id = parseInt(meetingId);
@@ -30,7 +28,15 @@ export default function AdminAssignmentPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [meetingId]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadData();
+  }, [loadData]);
 
   async function handleAutoAssign() {
     if (!meetingId) return;
@@ -80,7 +86,7 @@ export default function AdminAssignmentPage() {
     let guestResponse: any = null;
 
     // Remove guest from current host group
-    for (const [hostId, group] of Object.entries(newHostGroups)) {
+    for (const [_hostId, group] of Object.entries(newHostGroups)) {
       const g = (group as any).guests as any[];
       const idx = g.findIndex((r: any) => r.userId === userId);
       if (idx !== -1) {

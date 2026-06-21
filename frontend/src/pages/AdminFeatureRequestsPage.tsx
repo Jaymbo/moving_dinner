@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { featureRequests } from '../api/client';
 
 export default function AdminFeatureRequestsPage() {
@@ -8,9 +8,7 @@ export default function AdminFeatureRequestsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
 
-  useEffect(() => { loadRequests(); }, [filterStatus, filterType]);
-
-  async function loadRequests() {
+  const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
       const filters: any = {};
@@ -23,7 +21,15 @@ export default function AdminFeatureRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filterStatus, filterType]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadRequests();
+  }, [loadRequests]);
 
   async function handleUpdateStatus(id: number, status: string) {
     try {
@@ -64,23 +70,10 @@ export default function AdminFeatureRequestsPage() {
     rejected: '#ef4444',
   };
 
-  const statusLabels: Record<string, string> = {
-    open: 'Offen',
-    in_progress: 'In Bearbeitung',
-    done: 'Erledigt',
-    rejected: 'Abgelehnt',
-  };
-
   const priorityColors: Record<string, string> = {
     low: '#9ca3af',
     medium: '#f59e0b',
     high: '#ef4444',
-  };
-
-  const priorityLabels: Record<string, string> = {
-    low: 'Niedrig',
-    medium: 'Mittel',
-    high: 'Hoch',
   };
 
   if (loading) return <div className="loading">Laden...</div>;

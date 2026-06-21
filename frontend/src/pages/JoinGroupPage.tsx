@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { join } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../context/useAuth';
 
 export default function JoinGroupPage() {
   const { code } = useParams<{ code: string }>();
@@ -13,9 +13,7 @@ export default function JoinGroupPage() {
   const [joining, setJoining] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => { lookupCode(); }, [code]);
-
-  async function lookupCode() {
+  const lookupCode = useCallback(async () => {
     if (!code) return;
     try {
       const data = await join.lookup(code);
@@ -25,7 +23,15 @@ export default function JoinGroupPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [code]);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void lookupCode();
+  }, [lookupCode]);
 
   async function handleJoin() {
     if (!code) return;

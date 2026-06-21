@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { meetings, responses, groups } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../context/useAuth';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
 import FormField from '../components/ui/FormField';
@@ -22,23 +22,7 @@ export default function MyMeetingsPage() {
   const [newDeadlineTime, setNewDeadlineTime] = useState('23:59');
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => { 
-    loadMeetings(); 
-    loadCreatableGroups();
-  }, []);
-
-  async function loadMeetings() {
-    try {
-      const data = await meetings.my();
-      setMyMeetings(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadCreatableGroups() {
+  const loadCreatableGroups = useCallback(async () => {
     try {
       const g = await groups.list();
       const creatable = g.filter((group: any) => {
@@ -50,7 +34,27 @@ export default function MyMeetingsPage() {
     } catch (err: any) {
       console.error('Error loading creatable groups:', err);
     }
-  }
+  }, [user]);
+
+  const loadMeetings = useCallback(async () => {
+    try {
+      const data = await meetings.my();
+      setMyMeetings(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const didLoadRef = useRef(false);
+
+  useEffect(() => { 
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadMeetings(); 
+    void loadCreatableGroups();
+  }, [loadMeetings, loadCreatableGroups]);
 
   function combineDateTime(date: string, time: string): string {
     return `${date}T${time}`;
