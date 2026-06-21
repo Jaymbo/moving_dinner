@@ -14,6 +14,13 @@ frontend/dist
 !.env.example
 !.env.template
 
+# Backup configuration (may contain credentials)
+backup.config
+
+# Local backups and logs
+backups
+logs
+
 # Data & caches
 data
 old_version

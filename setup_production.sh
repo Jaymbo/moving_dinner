@@ -514,28 +514,45 @@ echo "  - Regelmäßig Updates einspielen"
 echo "  - Database Backups einrichten"
 echo ""
 
-# Create backup script
-cat > backup.sh << 'BACKUP_EOF'
-#!/bin/bash
-# Database Backup Script
-DATE=$(date +%Y%m%d-%H%M%S)
-BACKUP_DIR="./backups"
-mkdir -p ${BACKUP_DIR}
+# Create backup script (only if it doesn't exist, to avoid overwriting customizations)
+if [ ! -f "backup.sh" ]; then
+    if [ -f ".git/HEAD" ] && git ls-files --error-unmatch backup.sh &>/dev/null; then
+        # backup.sh is tracked by git, just ensure it's executable
+        chmod +x backup.sh
+        log_success "Backup-Skript aus Git aktualisiert (backup.sh)"
+    else
+        log_error "backup.sh nicht gefunden und nicht in Git verfolgt."
+        log_info "Bitte stelle sicher, dass backup.sh im Projektverzeichnis liegt."
+        exit 1
+    fi
+else
+    chmod +x backup.sh
+    log_success "Backup-Skript vorhanden (backup.sh)"
+fi
 
-docker compose exec -T db pg_dump -U movingdinner movingdinner > ${BACKUP_DIR}/backup-${DATE}.sql
-
-# Keep only last 7 backups
-ls -t ${BACKUP_DIR}/backup-*.sql | tail -n +8 | xargs -r rm
-
-echo "Backup erstellt: ${BACKUP_DIR}/backup-${DATE}.sql"
-BACKUP_EOF
-
-chmod +x backup.sh
-log_success "Backup-Skript erstellt (backup.sh)"
+# Create backup config example if missing
+if [ ! -f "backup.config" ]; then
+    if [ -f "backup.config.example" ]; then
+        cp backup.config.example backup.config
+        log_success "Backup-Konfiguration erstellt (backup.config)"
+        log_info "Passe backup.config an, um Remote-Backups zu aktivieren."
+    else
+        log_warning "backup.config.example nicht gefunden."
+    fi
+else
+    log_info "Backup-Konfiguration bereits vorhanden (backup.config)"
+fi
 
 log_info "Empfohlen: Backup-Cronjob einrichten"
-echo "  Beispiel (täglich um 3 Uhr):"
-echo "  0 3 * * * cd $(pwd) && ./backup.sh"
+echo "  Beispiel (täglich um 3:00 Uhr):"
+echo "  0 3 * * * cd $(pwd) && ./backup.sh >> logs/backup-cron.log 2>&1"
+echo ""
+echo "  Manuelles Backup testen:"
+echo "    ./backup.sh"
+echo "  Backup verifizieren:"
+echo "    ./backup.sh verify"
+echo "  Backup wiederherstellen (VORSICHT):"
+echo "    ./backup.sh restore backups/backup-YYYYMMDD-HHMMSS.sql.gz"
 
 echo ""
 log_success "Viel Erfolg mit deiner Moving Dinner Installation! 🎉"

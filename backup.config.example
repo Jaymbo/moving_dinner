@@ -1,0 +1,31 @@
+# Moving Dinner - Backup Konfiguration
+#
+# Kopiere diese Datei nach backup.config und passe die Werte an.
+# backup.config wird von backup.sh geladen (wenn vorhanden) und
+# ist in .gitignore eingetragen, damit sensible Daten nicht committet werden.
+
+# -----------------------------------------------------------------------------
+# Lokale Aufbewahrung
+# -----------------------------------------------------------------------------
+# Wie viele Tage Backups lokal im Ordner ./backups aufbewahrt werden sollen.
+# RETENTION_DAYS=14
+
+# -----------------------------------------------------------------------------
+# Optional: Remote-Backup via rsync / SSH
+# -----------------------------------------------------------------------------
+# Beispiele:
+#   REMOTE_SYNC_TARGET="user@backup-server:/pfad/zu/backups"
+#   REMOTE_SYNC_TARGET="/mnt/externe-festplatte/backups"
+#
+# REMOTE_SYNC_TARGET=""
+
+# -----------------------------------------------------------------------------
+# Optional: S3-kompatibler Upload (benötigt installiertes s3cmd)
+# -----------------------------------------------------------------------------
+# S3_ENDPOINT=https://s3.example.com
+# S3_BUCKET=movingdinner-backups
+# S3_ACCESS_KEY=...
+# S3_SECRET_KEY=...
+#
+# Hinweis: s3cmd muss separat konfiguriert sein oder Umgebungsvariablen
+#          müssen im Cronjob gesetzt werden.
