@@ -39,7 +39,8 @@ log_error() {
 }
 
 check_root() {
-    if [ "$EUID" -eq 0 ]; then
+    # Multiple checks to ensure we're not running as root
+    if [ "$EUID" -eq 0 ] || [ "$(id -u)" -eq 0 ] || [ "$(whoami)" = "root" ]; then
         log_error "Bitte dieses Skript NICHT als root ausführen!"
         log_info "Führe es als normaler User aus, der Docker-Berechtigung hat."
         log_info "Falls nötig: sudo usermod -aG docker \$USER && neu einloggen"
