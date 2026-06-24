@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-
-const prisma = new PrismaClient();
+import prisma from '../src/db.ts';
 
 async function main() {
   // Check if database is already seeded
