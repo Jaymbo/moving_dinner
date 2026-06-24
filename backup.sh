@@ -132,6 +132,11 @@ restore_backup() {
     # Stop backend to avoid concurrent writes during restore
     ${COMPOSE_CMD} stop backend || log_warn "Backend konnte nicht gestoppt werden."
 
+    # Drop and recreate the public schema so the restore starts from a clean DB.
+    # This also removes any seed/demo data that may have been inserted before restore.
+    log_warn "Leere Datenbank '${DB_NAME}' (DROP/CREATE SCHEMA public)..."
+    ${COMPOSE_CMD} exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${DB_USER}; GRANT ALL ON SCHEMA public TO public;"
+
     gzip -dc "${target_file}" | ${COMPOSE_CMD} exec -T db psql -U "${DB_USER}" -d "${DB_NAME}"
 
     ${COMPOSE_CMD} start backend || log_warn "Backend konnte nicht gestartet werden."
