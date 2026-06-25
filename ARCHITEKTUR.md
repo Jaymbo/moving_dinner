@@ -475,7 +475,7 @@ moving-dinner/
 
 ```
 Eingehende Mails:
-  info@jasondietrich.de → Cloudflare Email Routing → privates Postfach (Gmail etc.)
+  info@movingdinner.jasondietrich.de → Cloudflare Email Routing → privates Postfach (Gmail etc.)
 
 Ausgehende Mails (automatisiert):
   Moving Dinner App → SMTP Relay (Resend/Brevo) → Empfänger
@@ -491,7 +491,7 @@ Private IP-Adressen (Heimanschlüsse) stehen auf den Blacklists der großen Anbi
 ### 9.3 Empfang: Cloudflare Email Routing ✅ (bereits erledigt)
 
 - Cloudflare Dashboard → Email → Email Routing aktiviert
-- Regel: `info@jasondietrich.de` → Weiterleitung an privates Postfach
+- Regel: `info@movingdinner.jasondietrich.de` → Weiterleitung an privates Postfach
 - Cloudflare setzt MX-Records automatisch
 
 ### 9.4 Versand: SMTP-Relay einrichten (noch zu tun)
@@ -518,13 +518,13 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=resend                 # bei Resend: \"resend\", bei Brevo: Login-Mail
 SMTP_PASS=re_xxxxxxxxxxxx       # API-Key vom Relay-Dienst
-SMTP_FROM=Moving Dinner <info@jasondietrich.de>
+SMTP_FROM=Moving Dinner <info@movingdinner.jasondietrich.de>
 BASE_URL=https://deine-domain.de  # für Links in E-Mails
 ```
 
 **Schritt 4 (optional): Gmail \"Senden als\" einrichten:**
 - Gmail → Einstellungen → Konto und Import → \"Senden als\"
-- `info@jasondietrich.de` hinzufügen
+- `info@movingdinner.jasondietrich.de` hinzufügen
 - Gleiche SMTP-Daten wie oben eintragen
 - Bestätigungsmail kommt über Cloudflare Routing an
 

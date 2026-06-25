@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import useAuth from './context/useAuth';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -15,6 +16,9 @@ import AdminFeatureRequestsPage from './pages/AdminFeatureRequestsPage';
 import RsvpPage from './pages/RsvpPage';
 import JoinGroupPage from './pages/JoinGroupPage';
 import PublicRegisterPage from './pages/PublicRegisterPage';
+import ImpressumPage from './pages/ImpressumPage';
+import DatenschutzPage from './pages/DatenschutzPage';
+import AGBPage from './pages/AGBPage';
 import FeatureRequestChatWidget from './components/FeatureRequestChatWidget';
 import AdminLayout from './components/AdminLayout';
 
@@ -128,14 +132,10 @@ export default function App() {
           <Route path="/rsvp/:token" element={<RsvpPage />} />
           <Route path="/join/:code" element={<JoinGroupPage />} />
           <Route path="/public/register/:meetingId" element={<PublicRegisterPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <MyMeetingsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={user ? <MyMeetingsPage /> : <LandingPage />} />
+          <Route path="/impressum" element={<ImpressumPage />} />
+          <Route path="/datenschutz" element={<DatenschutzPage />} />
+          <Route path="/agb" element={<AGBPage />} />
           <Route
             path="/profile"
             element={

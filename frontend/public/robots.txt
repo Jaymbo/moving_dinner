@@ -1,0 +1,161 @@
+# robots.txt für Moving Dinner
+# https://movingdinner.jasondietrich.de/robots.txt
+
+# ─────────────────────────────────────────────────────────────
+# Allgemeine Crawler
+# ─────────────────────────────────────────────────────────────
+User-agent: *
+Allow: /
+
+# Crawl-Verzögerung für höfliches Crawling
+Crawl-delay: 1
+
+# Sitemap-Position
+Sitemap: https://movingdinner.jasondietrich.de/sitemap.xml
+
+# Wichtige öffentliche Seiten
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+
+# Private Bereiche (für Crawler ohne Login nicht zugänglich)
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+Disallow: /rsvp/
+Disallow: /join/
+Disallow: /public/register/
+
+# ─────────────────────────────────────────────────────────────
+# KI-Crawler (AI Bots) - Eingeschränkt
+# ─────────────────────────────────────────────────────────────
+# Hinweis: KI-Crawler dürfen keine personenbezogenen Daten crawlen
+
+# ChatGPT / OpenAI
+User-agent: GPTBot
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Claude / Anthropic
+User-agent: ClaudeBot
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Google Bard / Gemini
+User-agent: Google-Extended
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Bing Chat / Microsoft Copilot
+User-agent: BingBot
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Apple Bot
+User-agent: AppleBot
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /impressum
+Disallow: /datenschutz
+Disallow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# ─────────────────────────────────────────────────────────────
+# Suchmaschinen
+# ─────────────────────────────────────────────────────────────
+
+# Google
+User-agent: Googlebot
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Bing
+User-agent: bingbot
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Yandex
+User-agent: YandexBot
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/
+
+# Baidu
+User-agent: Baiduspider
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Allow: /agb
+Disallow: /groups/
+Disallow: /profile
+Disallow: /admin/

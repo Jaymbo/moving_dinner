@@ -32,7 +32,7 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-resend}
       SMTP_PASS: ${SMTP_PASS:-changeme}
-      SMTP_FROM: ${SMTP_FROM:-Moving Dinner <info@jasondietrich.de>}
+      SMTP_FROM: ${SMTP_FROM:-Moving Dinner <info@movingdinner.jasondietrich.de>}
       BASE_URL: ${BASE_URL:-http://localhost:3003}
     depends_on:
       db:
