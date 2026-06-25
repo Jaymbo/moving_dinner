@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
+import prisma from '../db.js';
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -50,16 +51,12 @@ export async function notifyGroupNewMeeting(
   meetingDate: Date,
   deadline: Date
 ): Promise<void> {
-  const members = await (
-    await import('../db')
-  ).default.groupMember.findMany({
+  const members = await prisma.groupMember.findMany({
     where: { groupId },
     include: { user: true },
   });
 
-  const tokens = await (
-    await import('../db')
-  ).default.rsvpToken.findMany({
+  const tokens = await prisma.rsvpToken.findMany({
     where: { meetingId },
     include: { user: true },
   });
@@ -99,7 +96,6 @@ export async function sendDeadlineReminder(
   meetingDate: Date,
   deadline: Date
 ): Promise<void> {
-  const prisma = (await import('../db')).default;
 
   const meeting = await prisma.meeting.findUnique({
     where: { id: meetingId },
@@ -189,7 +185,6 @@ Moving Dinner`;
 }
 
 export async function sendAssignmentEmails(meetingId: number): Promise<void> {
-  const prisma = (await import('../db')).default;
 
   const meeting = await prisma.meeting.findUnique({
     where: { id: meetingId },
