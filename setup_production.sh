@@ -153,63 +153,96 @@ log_success "Projektverzeichnis korrekt"
 ################################################################################
 
 echo ""
-log_info "Erstelle .env Datei für Production..."
+log_info "Lese existierende .env Datei oder erstelle neue Konfiguration..."
+
+# Helper function to safely read env value
+get_env_value() {
+    local key="$1"
+    local default="$2"
+    if [ -f ".env" ]; then
+        local value=$(grep "^${key}=" .env 2>/dev/null | cut -d'=' -f2- | sed 's/^["'"'"']//;s/["'"'"']$//')
+        echo "${value:-$default}"
+    else
+        echo "$default"
+    fi
+}
+
+# Read existing values or set defaults
+EXISTING_JWT_SECRET=$(get_env_value "JWT_SECRET" "")
+EXISTING_BASE_URL=$(get_env_value "BASE_URL" "")
+EXISTING_SMTP_HOST=$(get_env_value "SMTP_HOST" "")
+EXISTING_SMTP_PORT=$(get_env_value "SMTP_PORT" "587")
+EXISTING_SMTP_SECURE=$(get_env_value "SMTP_SECURE" "false")
+EXISTING_SMTP_USER=$(get_env_value "SMTP_USER" "")
+EXISTING_SMTP_PASS=$(get_env_value "SMTP_PASS" "")
+EXISTING_SMTP_FROM=$(get_env_value "SMTP_FROM" "")
+EXISTING_DB_PASSWORD=$(get_env_value "POSTGRES_PASSWORD" "")
+EXISTING_NODE_ENV=$(get_env_value "NODE_ENV" "production")
+
+echo ""
+echo "=========================================="
+echo "  Konfiguration überprüfen und anpassen"
+echo "=========================================="
+echo ""
 
 if [ -f ".env" ]; then
-    log_warning ".env Datei existiert bereits!"
+    log_info "Existierende .env Datei gefunden. Zeige aktuelle Werte:"
     echo ""
-    echo "  Aktuelle Konfiguration:"
-    if grep -q "BASE_URL" .env; then
-        echo "    BASE_URL: $(grep BASE_URL .env | cut -d'=' -f2)"
-    fi
-    if grep -q "SMTP_HOST" .env; then
-        echo "    SMTP_HOST: $(grep SMTP_HOST .env | cut -d'=' -f2)"
-    fi
+    echo "  BASE_URL:     ${EXISTING_BASE_URL:-<nicht gesetzt>}"
+    echo "  SMTP_HOST:    ${EXISTING_SMTP_HOST:-<nicht gesetzt>}"
+    echo "  SMTP_USER:    ${EXISTING_SMTP_USER:-<nicht gesetzt>}"
+    echo "  SMTP_PASS:    ${EXISTING_SMTP_PASS:+********}"
+    echo "  SMTP_FROM:    ${EXISTING_SMTP_FROM:-<nicht gesetzt>}"
+    echo "  DB_PASSWORD:  ${EXISTING_DB_PASSWORD:+********}"
+    echo "  JWT_SECRET:   ${EXISTING_JWT_SECRET:+********}"
     echo ""
-    read -p "Möchtest du sie überschreiben? (y/N): " -n 1 -r
+    read -p "Möchtest du alle Werte übernehmen und nur einzelne anpassen? (Y/n): " -n 1 -r
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Überspringe .env Erstellung - verwende existierende Konfiguration"
-        # Load existing values safely (grep instead of source to avoid shell issues)
-        DOMAIN=$(grep "^BASE_URL=" .env | cut -d'=' -f2 | sed 's|https://||')
-        SKIP_ENV_CREATION=true
-    else
-        mv .env .env.backup.$(date +%Y%m%d-%H%M%S)
-        log_success "Alte .env gesichert"
-        SKIP_ENV_CREATION=false
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        log_info "Starte komplette Neueingabe..."
+        EXISTING_JWT_SECRET=""
+        EXISTING_BASE_URL=""
+        EXISTING_SMTP_HOST=""
+        EXISTING_SMTP_USER=""
+        EXISTING_SMTP_PASS=""
+        EXISTING_SMTP_FROM=""
+        EXISTING_DB_PASSWORD=""
     fi
 else
-    SKIP_ENV_CREATION=false
+    log_info "Keine .env Datei gefunden. Starte Neueingabe..."
 fi
 
-# Generate JWT Secret (only if not skipping)
-if [ "$SKIP_ENV_CREATION" = false ]; then
-    log_info "Generiere sicheres JWT Secret..."
+echo ""
+log_info "Generiere sicheres JWT Secret (falls nicht vorhanden)..."
+if [ -z "$EXISTING_JWT_SECRET" ] || [ ${#EXISTING_JWT_SECRET} -lt 32 ]; then
     JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32)
+    log_success "Neues JWT Secret generiert"
+else
+    JWT_SECRET="$EXISTING_JWT_SECRET"
+fi
 
-    # Collect user input
-    echo ""
-    echo "=========================================="
-    echo "  Production Konfiguration"
-    echo "=========================================="
-    echo ""
-
-    # Domain
-    read -p "Deine Domain (z.B. moving-dinner.example.com): " DOMAIN
-    if [ -z "$DOMAIN" ]; then
+# Domain / Base URL
+echo ""
+read -p "Deine Domain (z.B. moving-dinner.example.com): " DOMAIN_INPUT
+if [ -z "$DOMAIN_INPUT" ]; then
+    if [ -n "$EXISTING_BASE_URL" ]; then
+        DOMAIN_INPUT=$(echo "$EXISTING_BASE_URL" | sed 's|https://||')
+        log_info "Verwende existierende Domain: ${DOMAIN_INPUT}"
+    else
         log_error "Domain ist erforderlich!"
         exit 1
     fi
-    BASE_URL="https://${DOMAIN}"
-else
-    # Use existing BASE_URL
-    BASE_URL="${BASE_URL:-https://${DOMAIN}}"
 fi
+BASE_URL="https://${DOMAIN_INPUT}"
 
-# Email Provider (only if not skipping)
-if [ "$SKIP_ENV_CREATION" = false ]; then
-    echo ""
-    log_info "Wähle Email Provider:"
+# Email Configuration
+echo ""
+log_info "E-Mail Konfiguration:"
+echo "  Aktueller SMTP Host: ${EXISTING_SMTP_HOST:-<nicht gesetzt>}"
+read -p "SMTP Host übernehmen? (Y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    echo "  Wähle Email Provider:"
     echo "  1) Resend (100 Emails/Monat gratis, einfach)"
     echo "  2) Brevo (300 Emails/Tag gratis, EU-Server)"
     echo "  3) SendGrid (100 Emails/Tag gratis)"
@@ -224,7 +257,7 @@ if [ "$SKIP_ENV_CREATION" = false ]; then
             SMTP_SECURE="false"
             SMTP_USER="resend"
             read -p "Resend API Key (beginnt mit re_): " SMTP_PASS
-            read -p "Absender E-Mail (z.B. noreply@${DOMAIN}): " SMTP_FROM
+            read -p "Absender E-Mail (z.B. noreply@${DOMAIN_INPUT}): " SMTP_FROM
             ;;
         2)
             SMTP_HOST="smtp-relay.brevo.com"
@@ -266,20 +299,65 @@ if [ "$SKIP_ENV_CREATION" = false ]; then
             exit 1
             ;;
     esac
-
-    # Database Password
+else
+    SMTP_HOST="${EXISTING_SMTP_HOST}"
+    SMTP_PORT="${EXISTING_SMTP_PORT}"
+    SMTP_SECURE="${EXISTING_SMTP_SECURE}"
+    SMTP_USER="${EXISTING_SMTP_USER}"
+    SMTP_PASS="${EXISTING_SMTP_PASS}"
+    SMTP_FROM="${EXISTING_SMTP_FROM}"
+    
     echo ""
-    log_info "Datenbank Konfiguration..."
+    log_info "Aktuelle SMTP Werte werden verwendet:"
+    echo "  SMTP_HOST: ${SMTP_HOST}"
+    echo "  SMTP_PORT: ${SMTP_PORT}"
+    echo "  SMTP_USER: ${SMTP_USER}"
+    echo "  SMTP_FROM: ${SMTP_FROM}"
+    echo ""
+    read -p "SMTP Password übernehmen? (Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        read -p "Neues SMTP Password: " SMTP_PASS
+    fi
+    read -p "SMTP From übernehmen? (Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        read -p "Neuer Absender (z.B. Moving Dinner <info@${DOMAIN_INPUT}>): " SMTP_FROM
+    fi
+fi
+
+# Database Password
+echo ""
+log_info "Datenbank Konfiguration:"
+if [ -n "$EXISTING_DB_PASSWORD" ]; then
+    echo "  Existierendes Datenbank-Passwort wird verwendet."
+    read -p "Passwort übernehmen? (Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        read -p "Neues PostgreSQL Passwort (leer für automatisch generiertes): " DB_PASSWORD
+        if [ -z "$DB_PASSWORD" ]; then
+            DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+            log_success "Generiertes Datenbank-Passwort: ${DB_PASSWORD}"
+        fi
+    else
+        DB_PASSWORD="$EXISTING_DB_PASSWORD"
+        log_info "Verwende existierendes Datenbank-Passwort"
+    fi
+else
     read -p "PostgreSQL Passwort (leer lassen für automatisch generiertes): " DB_PASSWORD
     if [ -z "$DB_PASSWORD" ]; then
         DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
         log_success "Generiertes Datenbank-Passwort: ${DB_PASSWORD}"
     fi
+fi
 
-    # Create .env file
-    cat > .env << EOF
+# Create .env file
+echo ""
+log_info "Erstelle .env Datei..."
+
+cat > .env << EOF
 # Moving Dinner Production Configuration
-# Generated: $(date -Iseconds)
+# Updated: $(date -Iseconds)
 # ACHTUNG: Diese Datei enthält sensible Daten! Nicht committen!
 
 # JWT Security (für User Sessions)
@@ -287,7 +365,7 @@ JWT_SECRET=${JWT_SECRET}
 
 # Production URL
 BASE_URL=${BASE_URL}
-NODE_ENV=production
+NODE_ENV=${EXISTING_NODE_ENV:-production}
 
 # Database
 POSTGRES_USER=movingdinner
@@ -307,16 +385,25 @@ SMTP_FROM=${SMTP_FROM}
 PORT=3001
 EOF
 
-    log_success ".env Datei erstellt"
+log_success ".env Datei erstellt/aktualisiert"
 
-    # Secure .env file
-    chmod 600 .env
-    log_success ".env Berechtigungen gesetzt (nur Owner kann lesen)"
-else
-    # Load existing values from .env safely
-    log_info "Verwende existierende .env Konfiguration"
-    DOMAIN=$(grep "^BASE_URL=" .env | cut -d'=' -f2 | sed 's|https://||')
-fi
+# Secure .env file
+chmod 600 .env
+log_success ".env Berechtigungen gesetzt (nur Owner kann lesen)"
+
+# Show summary
+echo ""
+echo "=========================================="
+echo "  Konfiguration Zusammenfassung"
+echo "=========================================="
+echo ""
+echo "  Domain:       ${BASE_URL}"
+echo "  SMTP Host:    ${SMTP_HOST}"
+echo "  SMTP User:    ${SMTP_USER}"
+echo "  SMTP From:    ${SMTP_FROM}"
+echo "  DB Password:  ${DB_PASSWORD:+********}"
+echo "  JWT Secret:   ${JWT_SECRET:+********}"
+echo ""
 
 ################################################################################
 # Docker Compose Configuration
