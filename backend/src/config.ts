@@ -1,5 +1,12 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Lade zuerst .env.local für DATABASE_URL, dann ../.env für andere Werte
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Validates and loads configuration from environment variables.
